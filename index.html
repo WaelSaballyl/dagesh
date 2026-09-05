@@ -434,51 +434,6 @@ input[type=range]::-moz-range-thumb{width:32px;height:32px;border-radius:50%;bac
   border:3px solid var(--paper);box-shadow:0 3px 12px rgba(0,0,0,.6)}
 input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
 
-/* ===== شكل اللاب ===== */
-.app[data-view="lap"]{max-width:1160px;padding-bottom:300px}
-.app[data-view="lap"] .grid{display:grid;grid-template-columns:290px minmax(0,1fr);
-  gap:30px;align-items:start}
-.app[data-view="lap"] .board{padding-top:18px}
-.app[data-view="lap"] .rail{border-top:0;border-inline-start:1px solid var(--rule);
-  padding-top:18px;margin-top:0;padding-inline-start:24px;position:sticky;top:14px;
-  max-height:calc(100vh - 40px);overflow-y:auto}
-.app[data-view="lap"] .ring{max-width:640px;aspect-ratio:1/0.86}
-.app[data-view="lap"] .seat{width:118px}
-.app[data-view="lap"] .ring.tight .seat{width:96px}
-.app[data-view="lap"] .core .val{font-size:40px}
-.app[data-view="lap"] .core .ph{max-width:220px;font-size:11.5px}
-.app[data-view="lap"] .dock-in{max-width:1160px}
-.app[data-view="lap"] .myrow .hand .card{width:66px;height:94px}
-.app[data-view="lap"] .logbox{max-height:none}
-.app[data-view="lap"] .amtval{font-size:30px}
-.app[data-view="lap"] .quick{grid-template-columns:repeat(4,minmax(0,150px));justify-content:flex-start}
-@media(max-width:900px){ .app[data-view="lap"] .grid{grid-template-columns:1fr}
-  .app[data-view="lap"] .rail{border-inline-start:0;border-top:1px solid var(--rule);
-    padding-inline-start:0;margin-top:24px;position:static;max-height:none} }
-
-
-/* ===== الدردشة والحاضرون ===== */
-.chatbox{display:flex;flex-direction:column-reverse;gap:5px;max-height:170px;overflow-y:auto;
-  font-size:12.5px;margin-bottom:8px}
-.chatbox p{margin:0;color:var(--ink-2);line-height:1.5;word-break:break-word}
-.chatbox p b{color:var(--warn);font-weight:600;margin-inline-end:5px}
-.chatrow{display:flex;gap:6px}
-.chatrow input{flex:1;min-width:0;font:inherit;font-size:14px;padding:9px 11px;border-radius:9px;
-  background:var(--paper-2);border:1px solid var(--rule-2);color:var(--ink)}
-.chatrow input:focus{border-color:var(--warn);outline:none}
-.chatrow .act{flex:0 0 auto;min-width:auto;padding:9px 14px;font-size:13px}
-.lobby-p.off{opacity:.45}
-.lobby-p.spec .dot,.dot.sp{background:var(--ink-3);box-shadow:none}
-.off-tag{font-size:10px;color:var(--ink-3);margin-inline-start:auto}
-.spec-head{font-size:10px;letter-spacing:.2em;color:var(--ink-3);padding:10px 0 4px;
-  border-top:1px solid var(--rule);margin-top:6px}
-.kick{margin-inline-start:auto;width:24px;height:24px;border-radius:6px;border:1px solid var(--rule-2);
-  background:transparent;color:var(--ink-3);font-size:15px;line-height:1;flex:none}
-.kick:hover{border-color:var(--accent);color:var(--accent)}
-.off-tag + .kick{margin-inline-start:6px}
-.spec-note{background:var(--paper-2);border:1px solid var(--rule);border-radius:10px;padding:12px 14px}
-.spec-note b{color:var(--warn)}
-
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -491,7 +446,6 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
     <span class="sub">لعبة مساومة</span>
     <nav>
       <button class="tbtn" id="bMute" title="الصوت">🔊</button>
-      <button class="tbtn" id="bView" title="بدّل بين شكل الجوال وشكل اللاب">جوال</button>
       <button class="tbtn" id="bRules">القواعد</button>
       <button class="tbtn" id="bNew">جلسة جديدة</button>
     </nav>
@@ -906,42 +860,60 @@ function endSession(champ){
 }
 
 /* ================= الصوت =================
-   كل الأصوات مولّدة بـ WebAudio — ما فيه ملفات تتحمّل. */
+   كل الأصوات مبنية من ضجيج مفلتر — ورق حقيقي وفيش، بدون أي نغمات. */
 let AC=null, MUTED=(()=>{try{return localStorage.getItem("dagesh-mute")==="1"}catch(e){return false}})();
 function ac(){ if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
   if(AC&&AC.state==="suspended")AC.resume(); return AC; }
-function tone(f,dur,type,vol,slide){
+
+/* دفقة ضجيج بمرشّح — الأساس اللي نبني منه صوت الورق والفيش */
+function nz(o){
   const c=ac(); if(!c)return;
-  const o=c.createOscillator(), g=c.createGain();
-  o.type=type||"sine"; o.frequency.setValueAtTime(f,c.currentTime);
-  if(slide)o.frequency.exponentialRampToValueAtTime(slide,c.currentTime+dur);
-  g.gain.setValueAtTime(0,c.currentTime);
-  g.gain.linearRampToValueAtTime(vol||.12,c.currentTime+0.008);
-  g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+dur);
-  o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+dur+.02);
-}
-function noise(dur,vol,freq){                    // صوت ورقة تنسحب
-  const c=ac(); if(!c)return;
-  const n=Math.floor(c.sampleRate*dur), buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
-  for(let i=0;i<n;i++){ const t=i/n; d[i]=(Math.random()*2-1)*Math.pow(1-t,2.2); }
+  const dur=o.dur, n=Math.max(1,Math.floor(c.sampleRate*dur));
+  const buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
+  const sh=o.shape||3;
+  for(let k=0;k<n;k++){ const t=k/n; d[k]=(Math.random()*2-1)*Math.pow(1-t,sh); }
   const src=c.createBufferSource(); src.buffer=buf;
-  const bp=c.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=freq||2400; bp.Q.value=.8;
-  const g=c.createGain(); g.gain.value=vol||.22;
-  src.connect(bp);bp.connect(g);g.connect(c.destination);src.start();
+  const f=c.createBiquadFilter(); f.type=o.type||"bandpass";
+  const t0=c.currentTime+(o.at||0);
+  f.frequency.setValueAtTime(o.f,t0);
+  if(o.to)f.frequency.exponentialRampToValueAtTime(o.to,t0+dur);
+  f.Q.value=o.q||1;
+  const g=c.createGain(); g.gain.value=o.vol;
+  src.connect(f);f.connect(g);g.connect(c.destination);
+  src.start(t0); src.stop(t0+dur+0.02);
+}
+const rnd2=(a,b)=>a+Math.random()*(b-a);
+
+/* ورقة تنحط على الطاولة: صفعة قصيرة + جسم منخفض */
+function sCard(v,at){
+  v=v||1; at=at||0;
+  nz({dur:.07,vol:.34*v,f:rnd2(2400,3200),to:rnd2(600,900),q:.9,at});
+  nz({dur:.05,vol:.20*v,f:rnd2(150,220),q:.8,type:"lowpass",at:at+.004,shape:4});
+}
+/* ورقة تنسحب أو تنزلق */
+function sSlide(v,at){
+  v=v||1; at=at||0;
+  nz({dur:.15,vol:.16*v,f:1100,to:rnd2(2800,3600),q:.7,at,shape:1.6});
+}
+/* فيشة */
+function sChip(at){
+  at=at||0;
+  nz({dur:.028,vol:.26,f:rnd2(3200,4200),q:3.4,at});
+  nz({dur:.032,vol:.20,f:rnd2(2200,2800),q:3.0,at:at+.045});
 }
 function sfx(kind){
   if(MUTED)return;
   try{
     switch(kind){
-      case "card":   noise(.13,.20,2600); break;
-      case "deal":   for(let k=0;k<4;k++)setTimeout(()=>noise(.11,.16,2400+k*180),k*85); break;
-      case "chip":   tone(880,.07,"triangle",.10); setTimeout(()=>tone(1320,.09,"triangle",.08),55); break;
-      case "fold":   tone(300,.16,"sine",.09,180); noise(.1,.12,1200); break;
-      case "turn":   tone(660,.12,"sine",.09); break;
-      case "dagesh": noise(.18,.26,1800); setTimeout(()=>tone(220,.3,"sawtooth",.10,110),60); break;
-      case "win":    [523,659,784,1046].forEach((f,k)=>setTimeout(()=>tone(f,.28,"triangle",.11),k*95)); break;
-      case "lose":   tone(392,.38,"sine",.10,160); break;
-      case "msg":    tone(1180,.07,"sine",.07); break;
+      case "deal":   for(let k=0;k<4;k++)sCard(.85,k*.105); break;
+      case "card":   sCard(1); break;
+      case "chip":   sChip(0); break;
+      case "fold":   sSlide(1); break;
+      case "turn":   nz({dur:.04,vol:.13,f:1500,q:2.2}); break;
+      case "dagesh": for(let k=0;k<3;k++)sCard(1.1,k*.075); break;
+      case "win":    for(let k=0;k<6;k++)sChip(k*.055+Math.random()*.02); break;
+      case "lose":   sSlide(.9); nz({dur:.07,vol:.14,f:170,q:.8,type:"lowpass",at:.05,shape:4}); break;
+      case "msg":    nz({dur:.022,vol:.10,f:2900,q:4}); break;
     }
   }catch(e){}
 }
@@ -949,7 +921,7 @@ function toggleMute(){
   MUTED=!MUTED;
   try{localStorage.setItem("dagesh-mute",MUTED?"1":"0")}catch(e){}
   const b=$("bMute"); if(b)b.textContent=MUTED?"🔇":"🔊";
-  if(!MUTED)sfx("turn");
+  if(!MUTED)sCard(.9);
 }
 
 /* ================= الواجهة ================= */
@@ -1680,6 +1652,9 @@ function hostRoom(name,cap){
     if(e.type==="unavailable-id"){try{peer.destroy()}catch(x){} NET=null;return hostRoom(name,cap);}
     netStatus("مشكلة اتصال: "+e.type,true);
   });
+  wireHostConnections(peer);
+}
+function wireHostConnections(peer){
   peer.on("connection",c=>{
     c.on("open",()=>{
       const meta=c.metadata||{};
@@ -1746,26 +1721,85 @@ function joinRoom(name,code,tries){
           <button class="act b-brass wide" onclick="leaveRoom()">رجوع</button>`); }
       else if(d.t==="full")ovShow(`<div class="hero sm"><h2>ما قدرنا ندخلك</h2><p>${esc(d.why||"الغرفة مقفلة")}.</p></div>
         <button class="act b-brass wide" onclick="leaveRoom()">رجوع</button>`);
-      else if(d.t==="state"){ ovHide(); applyState(d.s); }
+      else if(d.t==="state"){ ovHide(); applyState(d.s); NET.lastState=d.s; }
+      else if(d.t==="closed"){ NET.closed=true; ovShow(`<div class="hero sm"><h2>المضيف أنهى الجلسة</h2>
+          <p>الغرفة انتهت بإرادة المضيف.</p></div>
+          <button class="act b-brass wide" onclick="leaveRoom()">رجوع للبداية</button>`); }
       else if(d.t==="reveal")revealSheet(d.shown,d.winners,d.over);
     });
-    c.on("close",()=>{
-      ovShow(`<div class="hero sm"><h2>انقطع الاتصال بالمضيف</h2>
-        <p>يمكن سكّر الصفحة أو راح نته. لو رجع، افتح نفس الرابط مرة ثانية وبترجع لمكانك.</p></div>
-        <div class="ctl">
-          <button class="act b-brass" onclick="ovHide();joinRoom('${esc(NET.me)}','${NET.code}')">حاول ترجع</button>
-          <button class="act b-quiet" onclick="leaveRoom()">رجوع للبداية</button></div>`);
-    });
+    c.on("close",()=>{ if(!NET||NET.closed)return; hostGone(); });
     c.on("error",()=>{ if(NET.seat===null)retry("ما وصلنا للمضيف"); });
     setTimeout(()=>{ if(NET.seat===null&&NET._retry)NET._retry("المضيف ما ردّ"); },9000);
   });
   peer.on("error",e=>{
-    if(e.type==="peer-unavailable"){netStatus("ما فيه غرفة بهذا الكود — تأكد إن المضيف فاتح الصفحة",true);return;}
+    if(e.type==="peer-unavailable"){
+      if(NET&&NET.migrating){setTimeout(()=>joinRoom(NET.me,NET.code),1600);return;}
+      netStatus("ما فيه غرفة بهذا الكود — تأكد إن المضيف فاتح الصفحة",true);return;}
     if(e.type==="network"||e.type==="server-error"||e.type==="socket-error"){retry("الشبكة تعبانة");return;}
     netStatus("مشكلة اتصال: "+e.type,true);
   });
 }
 
+/* ---------- المضيف طلع: نكمّل بدونه ----------
+   نختار خليفة (أقل مقعد باقٍ) يستلم نفس رمز الغرفة، والباقي يرجعون له.
+   الأرصدة محفوظة عند الجميع، فالجولة الحالية تُلغى ونبدأ جولة جديدة. */
+function knownPlayers(){
+  const d=NET&&NET.lobby;
+  if(d&&d.players&&d.players.length)return d.players.slice().sort((a,b)=>a.seat-b.seat);
+  if(NET&&NET.lastState)return NET.lastState.players.map((p,k)=>({cid:null,name:p.name,seat:k,online:true}));
+  return [];
+}
+function hostGone(){
+  if(!NET||NET.migrating)return;
+  NET.migrating=true;
+  const list=knownPlayers().filter(r=>r.seat!==0);         // مقعد 0 هو المضيف القديم
+  const rank=Math.max(0,list.findIndex(r=>r.cid===CID));
+  const wait=1200+rank*2600;                               // كل واحد ينتظر دوره عشان ما نتزاحم
+  ovShow(`<div class="hero sm"><h2>المضيف طلع</h2>
+    <p>نحاول نكمّل الجلسة بدونه. أرصدتكم محفوظة، والجولة الحالية تُلغى ونبدأ جولة جديدة.</p></div>
+    <div class="conn" id="netConn">ننتظر… ${rank===0?"انت اللي بتستلم":"لحظات"}</div>
+    <div class="ctl" style="margin-top:14px"><button class="act b-quiet" onclick="leaveRoom()">اخرج</button></div>`);
+  setTimeout(()=>claimHost(0),wait);
+}
+function claimHost(tries){
+  if(!NET||!NET.migrating)return;
+  if(tries>6){ netStatus("ما قدرنا نكمّل — ابدأوا غرفة جديدة",true); return; }
+  const code=NET.code, myName=NET.me, snap=NET.lastState, known=knownPlayers();
+  const peer=new Peer(peerIdFor(code),PEEROPTS);
+  peer.on("open",()=>{                                     // نجحنا نمسك الرمز = صرنا المضيف
+    netStatus("استلمت الاستضافة");
+    try{ if(NET.peer&&!NET.peer.destroyed)NET.peer.destroy(); }catch(e){}
+    becomeHost(peer,code,myName,snap,known);
+  });
+  peer.on("error",e=>{
+    try{peer.destroy()}catch(x){}
+    if(e.type==="unavailable-id"){                          // أحد غيرنا استلم — نرجع ضيف
+      NET.migrating=false;
+      setTimeout(()=>joinRoom(myName,code),900);
+    }else setTimeout(()=>claimHost(tries+1),1400);
+  });
+}
+function becomeHost(peer,code,myName,snap,known){
+  const mySeat=Math.max(0,known.findIndex(r=>r.cid===CID));
+  NET={peer,isHost:true,code,me:myName,seat:mySeat,role:"player",cap:Math.max(4,known.length),
+       chat:[],migrating:false,
+       roster:known.map(r=>({cid:r.cid||("?"+r.seat),name:r.name,seat:r.seat,role:"player",
+                             conn:null,online:r.cid===CID}))};
+  const meRow=NET.roster.find(r=>r.cid===CID);
+  if(meRow){meRow.online=true;meRow.name=myName;}
+  keepAlive(peer); keepAwake(true);
+  wireHostConnections(peer);
+  /* نعيد بناء الجلسة بنفس الأسماء والأرصدة */
+  const names=known.map(r=>r.name);
+  newSession(names.length,"online","mid",names);
+  if(snap&&snap.players) S.players.forEach((p,k)=>{
+    const q=snap.players[k]; if(q){p.chips=q.chips;p.out=q.out;}
+  });
+  S.players.forEach(p=>p.bot=false);
+  S.viewer=mySeat;
+  say(`${myName} استلم الاستضافة — الجولة أُلغيت ونبدأ من جديد`,"hi");
+  startHand(); pushRoster(); pushState(); render();
+}
 /* ---------- شاشات الغرفة ---------- */
 function rosterRows(list,specs,canKick){
   const rows=list.map(r=>`<div class="lobby-p ${r.online?"":"off"}">
@@ -1818,6 +1852,7 @@ function startOnline(){
   pushState();render();
 }
 function leaveRoom(){
+  if(isHost()&&NET.roster) broadcast({t:"closed"});   // خروج مقصود = الغرفة تنتهي
   keepAwake(false);
   try{ if(NET&&NET.peer&&!NET.peer.destroyed) NET.peer.destroy(); }catch(e){}
   NET=null; S=null;
@@ -1832,23 +1867,6 @@ function copyLink(btn,link){
 }
 
 $("gateBtn").addEventListener("click",()=>{S.gate=false;render();});
-/* شكل الجوال أو اللاب — يتحدد تلقائياً من الجهاز، وتقدر تبدّله بنفسك */
-function setView(v){
-  document.getElementById("app").dataset.view=v;
-  const b=$("bView"); if(b)b.textContent = v==="lap"?"لاب":"جوال";
-  try{localStorage.setItem("dagesh-view",v)}catch(e){}
-  if(window.S)render();
-}
-(function(){
-  let v=null; try{v=localStorage.getItem("dagesh-view")}catch(e){}
-  if(v!=="lap"&&v!=="phone"){
-    const touch=matchMedia("(pointer:coarse)").matches;
-    v=(!touch&&window.innerWidth>=1000)?"lap":"phone";     // لاب أو جوال تلقائياً
-  }
-  setView(v);
-})();
-$("bView").addEventListener("click",()=>setView(
-  document.getElementById("app").dataset.view==="lap"?"phone":"lap"));
 $("chatSend").addEventListener("click",chatSend);
 $("chatIn").addEventListener("keydown",e=>{if(e.key==="Enter")chatSend();});
 $("bMute").textContent=MUTED?"🔇":"🔊";
