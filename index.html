@@ -332,6 +332,11 @@ button.act[disabled]{opacity:.35;cursor:not-allowed}
 .field.big input{font-size:18px;padding:14px}
 .segs.tight button{min-width:38px;flex:0 0 auto;padding:8px 11px;font-size:13px}
 button.act.wide{width:100%;flex:none;margin-top:4px}
+.rejoin{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:16px;padding:12px 14px;
+  border:1px solid var(--warn);background:var(--warn-soft);border-radius:12px}
+.rejoin span{font-size:12.5px;color:var(--ink-2);flex:1;min-width:120px}
+.rejoin span b{color:var(--warn);font-family:"Alexandria",sans-serif;letter-spacing:.06em}
+.rejoin .act{flex:0 0 auto;min-width:auto;padding:9px 15px;font-size:13px}
 .setup-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;
   margin-top:20px;padding-top:14px;border-top:1px solid var(--rule)}
 .setup-foot span{font-size:11.5px;color:var(--ink-3)}
@@ -1133,6 +1138,7 @@ function render(){
 
   $("log").innerHTML=S.log.map(l=>`<p class="${l.c||""}">${l.t}</p>`).join("");
   $("bNew").style.display=(isOnline()&&!isHost())?"none":"";   // الضيف ما يقدر ينهي الجلسة
+  autoIfOffline();
   $("chatSec").hidden=!isOnline();
   $("rosterSec").hidden=!isOnline();
   if(isOnline()){
@@ -1415,6 +1421,10 @@ function setup(){
     <button class="act b-brass wide" id="go">ابدأ</button>
   </div>
 
+  ${(()=>{const r=lastRoom();return r?`<div class="rejoin">
+      <span>لك غرفة مفتوحة برمز <b>${r.code}</b></span>
+      <button class="act b-brass" onclick="ovHide();joinRoom('${esc(r.name)}','${r.code}')">ارجع لها</button>
+      <button class="linky" onclick="clearRoom();setup()">شيلها</button></div>`:""})()}
   <div class="setup-foot">
     <button class="linky" onclick="rules()">اقرأ القواعد</button>
     <span>الفوز: أول من يوصل مليون</span>
@@ -1689,6 +1699,28 @@ function wireHostConnections(peer){
     });
   });
 }
+/* لو صاحب الدور منقطع، نتصرّف عنه بعد مهلة عشان الجولة ما تتعلّق */
+function autoIfOffline(){
+  if(!isHost()||!S||!S.phase||S.phase==="done"||S.phase==="over")return;
+  const t=whoseTurn(); if(t<0)return;
+  const r=NET.roster.find(x=>x.role==="player"&&x.seat===t);
+  if(!r||r.online){ clearTimeout(S._autoT); S._autoT=null; return; }
+  if(S._autoFor===t&&S._autoT)return;
+  clearTimeout(S._autoT); S._autoFor=t;
+  S._autoT=setTimeout(()=>{
+    if(!isHost()||!S||whoseTurn()!==t)return;
+    const rr=NET.roster.find(x=>x.role==="player"&&x.seat===t);
+    if(rr&&rr.online)return;
+    const nm=S.players[t]?S.players[t].name:"لاعب";
+    if(S.phase==="betting"){ say(`${nm} منقطع — انسحب تلقائياً`); applyAct(t,"fold"); }
+    else if(S.phase==="offer"){ say(`${nm} منقطع — وافق تلقائياً`); applyAct(t,"resp",{r:"ok"}); }
+    else if(S.phase==="mic"){                       // المايك منقطع: تقسيم بالتساوي
+      const l=bettors(), q=Math.floor(split()/l.length/STEP)*STEP, sh={}; let u=0;
+      l.forEach(x=>{ if(x.i!==t){sh[x.i]=q;u+=q;} }); sh[t]=split()-u;
+      say(`${nm} منقطع — قسّمنا بالتساوي عنه`); applyAct(t,"offer",{shares:sh});
+    }
+  },15000);
+}
 function say2(t){ if(S&&S.phase){say(t);} }
 
 /* ---------- الضيف ---------- */
@@ -1721,8 +1753,9 @@ function joinRoom(name,code,tries){
           <button class="act b-brass wide" onclick="leaveRoom()">رجوع</button>`); }
       else if(d.t==="full")ovShow(`<div class="hero sm"><h2>ما قدرنا ندخلك</h2><p>${esc(d.why||"الغرفة مقفلة")}.</p></div>
         <button class="act b-brass wide" onclick="leaveRoom()">رجوع</button>`);
-      else if(d.t==="state"){ ovHide(); applyState(d.s); NET.lastState=d.s; }
-      else if(d.t==="closed"){ NET.closed=true; ovShow(`<div class="hero sm"><h2>المضيف أنهى الجلسة</h2>
+      else if(d.t==="state"){ ovHide(); applyState(d.s); NET.lastState=d.s; saveRoom(); }
+      else if(d.t==="hostleft"){ NET.migrating=false; hostGone(); }
+      else if(d.t==="closed"){ NET.closed=true; clearRoom(); ovShow(`<div class="hero sm"><h2>المضيف أنهى الجلسة</h2>
           <p>الغرفة انتهت بإرادة المضيف.</p></div>
           <button class="act b-brass wide" onclick="leaveRoom()">رجوع للبداية</button>`); }
       else if(d.t==="reveal")revealSheet(d.shown,d.winners,d.over);
@@ -1848,9 +1881,35 @@ function startOnline(){
   newSession(names.length,"online","mid",names);
   S.players.forEach(p=>p.bot=false);
   S.viewer=NET.seat;
+  saveRoom();
   broadcast(rosterMsg());
   pushState();render();
 }
+/* نحفظ آخر غرفة عشان اللي يطلع يقدر يرجع لها بضغطة */
+function saveRoom(){
+  try{ localStorage.setItem("dagesh-room",JSON.stringify({code:NET.code,name:NET.me,t:Date.now()})); }catch(e){}
+}
+function lastRoom(){
+  try{ const r=JSON.parse(localStorage.getItem("dagesh-room")||"null");
+       return (r && Date.now()-r.t < 6*3600e3) ? r : null; }catch(e){ return null; }
+}
+function clearRoom(){ try{localStorage.removeItem("dagesh-room")}catch(e){} }
+
+/* المضيف يطلع بس الجلسة تكمل — يقدر يرجع بعدين لنفس مقعده */
+function hostStepOut(){
+  saveRoom();
+  broadcast({t:"hostleft"});
+  keepAwake(false);
+  try{ if(NET.peer&&!NET.peer.destroyed)NET.peer.destroy(); }catch(e){}
+  const room=lastRoom();
+  NET=null; S=null; ovHide(); setup();
+  setTimeout(()=>{ if(room)ovShow(`<div class="hero sm"><h2>طلعت من الغرفة</h2>
+    <p>الجلسة تكمل بدونك، وواحد منهم استلم الاستضافة. تقدر ترجع لنفس مقعدك ورصيدك أي وقت.</p></div>
+    <div class="ctl">
+      <button class="act b-brass" onclick="ovHide();joinRoom('${esc(room.name)}','${room.code}')">ارجع للغرفة ${room.code}</button>
+      <button class="act b-quiet" onclick="ovHide()">لا، خلاص</button></div>`);},250);
+}
+
 function leaveRoom(){
   if(isHost()&&NET.roster) broadcast({t:"closed"});   // خروج مقصود = الغرفة تنتهي
   keepAwake(false);
@@ -1874,11 +1933,12 @@ $("bMute").addEventListener("click",toggleMute);
 $("bRules").addEventListener("click",rules);
 $("bNew").addEventListener("click",()=>{
   if(!isOnline())return setup();
-  ovShow(`<div class="hero sm"><h2>تنهي الجلسة؟</h2>
-    <p>لو أنهيتها، الغرفة تنقطع على الكل وترجعون لشاشة البداية. ما فيه رجعة.</p></div>
-    <div class="ctl">
-      <button class="act b-brass" onclick="ovHide()">لا، رجّعني للعب</button>
-      <button class="act b-pom" onclick="leaveRoom()">نعم، أنهِ الجلسة</button>
+  ovShow(`<div class="hero sm"><h2>تبي تطلع؟</h2>
+    <p>تقدر تطلع والجلسة تكمل بدونك، وترجع لنفس مقعدك ورصيدك متى ما بغيت.</p></div>
+    <div class="ctl"><button class="act b-brass" onclick="ovHide()">لا، رجّعني للعب</button></div>
+    <div class="ctl" style="margin-top:8px">
+      <button class="act b-quiet" onclick="ovHide();hostStepOut()">اطلع والجلسة تكمل</button>
+      ${isHost()?`<button class="act b-pom" onclick="leaveRoom()">أنهِ الجلسة للكل</button>`:""}
     </div>`);
 });
 setup();
