@@ -447,6 +447,14 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
 .bot-tag{font-size:9.5px;color:var(--ink-3);border:1px solid var(--rule-2);border-radius:3px;padding:1px 5px}
 .lobby-p.bot .dot{background:var(--warn);box-shadow:none}
 
+.fw{position:fixed;inset:0;z-index:30;pointer-events:none}
+.endwrap.party .crown{font-size:56px;text-align:center;margin-bottom:6px;
+  animation:pop2 .7s cubic-bezier(.3,1.6,.4,1) backwards}
+@keyframes pop2{from{transform:scale(.3) rotate(-18deg);opacity:0}}
+.endwrap.party h2{color:var(--warn)}
+.row.top{background:var(--warn-soft);border-radius:8px;padding-inline:9px}
+.row.top b,.row.top span{color:var(--warn)}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -857,10 +865,9 @@ function finishRound(reveal){
   const champ=alive().find(p=>p.chips>=goal());
   if(reveal){
     const over=!!champ||alive().length<=endAt();
-    if(typeof isHost==="function"&&isHost()){
-      const slim=a=>a.map(x=>({name:x.name,hand:x.hand,eval:x.eval}));
-      for(const c of NET.conns.values())
-        if(c.open)try{c.send({t:"reveal",shown:slim(reveal.shown),winners:slim(reveal.winners),over});}catch(e){}
+    if(isOnline()&&isHost()){
+      const slim=a=>a.map(x=>({name:x.name,hand:x.hand,eval:x.eval,bet:x.bet,i:x.i}));
+      broadcast({t:"reveal",shown:slim(reveal.shown),winners:slim(reveal.winners),over});
     }
     revealSheet(reveal.shown,reveal.winners,over);
   }
@@ -872,10 +879,27 @@ function endSession(champ){
   S.phase="over";
   const why = champ ? `وصل هدف ${fmt(goal())}`
             : left.length<=endAt() ? `بقي ${endAt()} لاعبين — الأعلى رصيداً يفوز` : "";
-  ovShow(`<h2>انتهت الجلسة</h2><p><b>${best.name}</b> فاز بـ ${fmt(best.chips)}${why?" — "+why:""}.</p>
-   <div class="rows" style="margin:14px 0">${S.players.slice().sort((a,b)=>b.chips-a.chips)
-     .map(p=>`<div class="row"><span>${p.name}</span><b>${fmt(p.chips)}</b></div>`).join("")}</div>
-   <div class="ctl"><button class="act b-brass" onclick="setup()">جلسة جديدة</button></div>`);
+  const standings=S.players.slice().sort((a,b)=>b.chips-a.chips)
+                   .map(p=>({name:p.name,chips:p.chips}));
+  const win={name:best.name,chips:best.chips,seat:best.i};
+  if(isOnline()&&isHost())broadcast({t:"over",win,standings,why,party:!!champ});
+  endScreen(win,standings,why,!!champ);
+}
+
+/* شاشة النهاية — يشوفها الكل، ومع الفوز بالهدف تصير حفلة */
+function endScreen(win,standings,why,party){
+  const mine = isOnline() ? (NET && NET.seat===win.seat) : (win.seat===0);
+  if(party){ fireworks(6000); sfx("party"); }
+  ovShow(`<div class="endwrap ${party?"party":""}">
+    ${party?`<div class="crown">🎉</div>`:""}
+    <div class="hero sm"><h2>${party?`فاز ${esc(win.name)}!`:"انتهت الجلسة"}</h2>
+      <p>${party?`وصل <b>${fmt(win.chips)}</b> وخلّص الجلسة.${mine?" وهذا انت — مبروك!":""}`
+                :`<b>${esc(win.name)}</b> فاز بـ ${fmt(win.chips)}${why?" — "+why:""}.`}</p></div>
+    <div class="rows" style="margin:14px 0">${standings.map((p,k)=>
+      `<div class="row ${k===0?"top":""}"><span>${k===0?"🏆 ":""}${esc(p.name)}</span>
+       <b>${fmt(p.chips)}</b></div>`).join("")}</div>
+    <div class="ctl"><button class="act b-brass" onclick="stopFireworks();${isOnline()?"leaveRoom()":"setup()"}">جلسة جديدة</button></div>
+  </div>`);
 }
 
 /* ================= الصوت =================
@@ -933,6 +957,15 @@ function sfx(kind){
       case "win":    for(let k=0;k<6;k++)sChip(k*.055+Math.random()*.02); break;
       case "lose":   sSlide(.9); nz({dur:.07,vol:.14,f:170,q:.8,type:"lowpass",at:.05,shape:4}); break;
       case "msg":    nz({dur:.022,vol:.10,f:2900,q:4}); break;
+      case "rocket": nz({dur:.55,vol:.10,f:280,to:2600,q:3.2,shape:.9}); break;
+      case "boom":   nz({dur:.30,vol:.34,f:190,q:.7,type:"lowpass",shape:2.4});
+                     nz({dur:.22,vol:.20,f:2000,to:520,q:.9,at:.01});
+                     for(let k=0;k<8;k++)nz({dur:.05,vol:.10,f:2600+Math.random()*2200,q:5,at:.12+k*.045});
+                     break;
+      case "party":  for(let k=0;k<7;k++)setTimeout(()=>{sfx("rocket");
+                       setTimeout(()=>sfx("boom"),520);},k*640);
+                     for(let k=0;k<10;k++)sChip(k*.07);
+                     break;
     }
   }catch(e){}
 }
@@ -941,6 +974,54 @@ function toggleMute(){
   try{localStorage.setItem("dagesh-mute",MUTED?"1":"0")}catch(e){}
   const b=$("bMute"); if(b)b.textContent=MUTED?"🔇":"🔊";
   if(!MUTED)sCard(.9);
+}
+
+/* ================= احتفال الفوز ================= */
+let FW=null;
+function stopFireworks(){ if(FW){cancelAnimationFrame(FW.raf);FW.cv.remove();FW=null;} }
+function fireworks(ms){
+  stopFireworks();
+  const cv=document.createElement("canvas");
+  cv.className="fw"; document.body.appendChild(cv);
+  const g=cv.getContext("2d");
+  const fit=()=>{cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio;
+                 g.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);};
+  fit(); addEventListener("resize",fit);
+  const P=[], R=[], t0=performance.now();
+  const COL=["#E06A75","#D8A64E","#4FC08C","#EEF1EF","#8ECBE8","#C58BE0"];
+  const launch=()=>{
+    const x=innerWidth*(0.15+Math.random()*0.7);
+    R.push({x,y:innerHeight+10,vy:-(7+Math.random()*4),
+            ty:innerHeight*(0.18+Math.random()*0.32),col:COL[(Math.random()*COL.length)|0]});
+    sfx("rocket");
+  };
+  const burst=(x,y,col)=>{
+    sfx("boom");
+    const n=46+((Math.random()*26)|0);
+    for(let k=0;k<n;k++){
+      const a=(k/n)*Math.PI*2+Math.random()*.3, sp=1.6+Math.random()*4.2;
+      P.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,
+              col:Math.random()<.25?"#fff":col,sz:1.6+Math.random()*2.2});
+    }
+  };
+  let last=0;
+  const step=now=>{
+    const el=now-t0;
+    if(now-last>430 && el<ms-900){ last=now; launch(); if(Math.random()<.45)setTimeout(launch,140); }
+    g.clearRect(0,0,innerWidth,innerHeight);
+    for(let k=R.length-1;k>=0;k--){ const r=R[k]; r.y+=r.vy; r.vy+=0.08;
+      g.globalAlpha=1; g.fillStyle=r.col; g.beginPath(); g.arc(r.x,r.y,2.4,0,7); g.fill();
+      g.globalAlpha=.35; g.fillRect(r.x-1,r.y,2,12);
+      if(r.vy>=-1.2||r.y<=r.ty){ burst(r.x,r.y,r.col); R.splice(k,1); } }
+    for(let k=P.length-1;k>=0;k--){ const q=P[k];
+      q.x+=q.vx; q.y+=q.vy; q.vy+=0.055; q.vx*=0.985; q.vy*=0.985; q.life-=0.011;
+      if(q.life<=0){P.splice(k,1);continue;}
+      g.globalAlpha=Math.max(0,q.life); g.fillStyle=q.col;
+      g.beginPath(); g.arc(q.x,q.y,q.sz,0,7); g.fill(); }
+    g.globalAlpha=1;
+    if(el<ms||P.length) FW.raf=requestAnimationFrame(step); else stopFireworks();
+  };
+  FW={cv,raf:requestAnimationFrame(step)};
 }
 
 /* ================= الواجهة ================= */
@@ -1823,6 +1904,8 @@ function guestOnMsg(topic,d){
   else if(d.t==="kicked"){ NET.closed=true; ovShow(`<div class="hero sm"><h2>انطردت من الغرفة</h2>
       <p>المضيف طلّعك من الجلسة.</p></div>
       <button class="act b-brass wide" onclick="leaveRoom()">رجوع</button>`); }
+  else if(d.t==="reveal"){ revealSheet(d.shown,d.winners,d.over); }
+  else if(d.t==="over"){ S&&(S.phase="over"); endScreen(d.win,d.standings,d.why,d.party); }
   else if(d.t==="hostleft"){ hostGone(); }
   else if(d.t==="closed"){ NET.closed=true; clearRoom();
       ovShow(`<div class="hero sm"><h2>المضيف أنهى الجلسة</h2><p>الغرفة انتهت بإرادة المضيف.</p></div>
