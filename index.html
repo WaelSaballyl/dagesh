@@ -1412,7 +1412,15 @@ function revealSheet(shown,winners,over){
     <div class="rev">${rows}</div>
     <button class="act b-brass wide" onclick="ovHide();${over?"endSession()":"act('next')"}">${over?"شوف النتيجة":"الجولة الجاية"}</button>`);
 }
+let RULES_BACK="setup";
+/* الرجوع من القواعد: للّعبة لو فيه جولة شغّالة، وإلا لشاشة البداية */
+function closeRules(){
+  ovHide();
+  if(RULES_BACK!=="game"){ S=null; setup(); }
+}
 function rules(){
+  const live = isOnline() || (S && S.phase && S.phase!=="over");
+  RULES_BACK = live ? "game" : "setup";
   ovShow(`
   <div class="hero sm"><h2>كيف تلعب داقش</h2>
     <p>اللعبة مو على قوة الورق بس — هي على قدرتك تقنع غيرك، وتعرف متى تكشف ومتى تسكت.</p></div>
@@ -1467,7 +1475,7 @@ function rules(){
     ولو أحد فلّس وبقيتم اثنين (أو ثلاثة إذا بدأتم 7 فأكثر)، الأعلى رصيداً يفوز.</div>
 
   <p class="credit">رسوم الأوراق: Vectorized Playing Cards 1.3 — Copyright 2011 Chris Aguilar، برخصة LGPL 3.</p>
-  <button class="act b-brass wide" onclick="ovHide(); if(!S) setup();">فهمت، يالله نلعب</button>`);
+  <button class="act b-brass wide" onclick="closeRules()">فهمت، يالله نلعب</button>`);
 }
 function setup(){
   let n=4,mode="online",diff="mid";
