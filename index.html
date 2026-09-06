@@ -531,6 +531,12 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script>
+/* لو انحجب cdnjs نجيب المكتبة من مصدر ثاني قبل ما يبدأ أي شي */
+if(typeof Peer==="undefined"){
+  document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');
+}
+</script>
+<script>
 "use strict";
 /* ================= داقش — المحرّك =================
    الشدّة مقفولة: لكل لاعب مرتبة وحدة بأشكالها الأربعة. */
@@ -1451,6 +1457,7 @@ function setup(){
     $("dWrap").style.display=(v==="bots")?"":"none";
   });
   const warn=(el,msg)=>{
+    el.scrollIntoView({block:"center",behavior:"smooth"});
     el.classList.add("bad");
     let w=el.parentNode.querySelector(".err");
     if(!w){w=document.createElement("span");w.className="err";el.parentNode.appendChild(w);}
@@ -1465,12 +1472,17 @@ function setup(){
   };
   $("fCode").addEventListener("input",e=>{ e.target.value=e.target.value.replace(/\D/g,"").slice(0,5);
     $("jn").disabled=e.target.value.length!==5; });
-  $("mk").addEventListener("click",()=>{ const nm=grabName(); if(nm)hostRoom(nm,cap); });
-  $("jn").addEventListener("click",()=>{
+  $("mk").addEventListener("click",e=>{
+    const nm=grabName(); if(!nm)return;
+    e.target.disabled=true; e.target.textContent="لحظة…";
+    setTimeout(()=>hostRoom(nm,cap),20);
+  });
+  $("jn").addEventListener("click",e=>{
     const nm=grabName(); if(!nm)return;
     const c=($("fCode").value||"").trim();
     if(!/^\d{5}$/.test(c))return warn($("fCode"),"الكود خمسة أرقام");
-    joinRoom(nm,c);
+    e.target.disabled=true; e.target.textContent="لحظة…";
+    setTimeout(()=>joinRoom(nm,c),20);
   });
   $("go").addEventListener("click",()=>{
     const names=mode==="bots"?["أنت",...BOTNAMES].slice(0,n)
@@ -1662,16 +1674,47 @@ function kick(cid){
 }
 
 /* ---------- المضيف ---------- */
-function hostRoom(name,cap){
+function hostRoom(name,cap,tries){
+  tries=tries||0;
+  if(typeof Peer==="undefined"){                      // المكتبة ما وصلت
+    return ovShow(`<div class="hero sm"><h2>ما قدرنا نجهّز الاتصال</h2>
+      <p>مكتبة الاتصال ما تحمّلت — يمكن النت أو حاجب إعلانات. جرّب تعيد تحميل الصفحة.</p></div>
+      <div class="ctl"><button class="act b-brass" onclick="location.reload()">أعد التحميل</button>
+      <button class="act b-quiet" onclick="ovHide();setup()">رجوع</button></div>`);
+  }
+  /* نوريه على طول إنه شغّال — قبل كان الزر يبان ميّت لين يرد الوسيط */
+  ovShow(`<div class="hero sm"><h2>جاري إنشاء الغرفة…</h2>
+    <p>نجهّز لك رمز الغرفة. ثانية وحدة.</p></div>
+    <div class="conn" id="netConn">نتصل بالوسيط…</div>
+    <div class="ctl" style="margin-top:14px">
+      <button class="act b-quiet" onclick="leaveRoom()">إلغاء</button></div>`);
   const code=mkCode();
   const peer=new Peer(peerIdFor(code),PEEROPTS);
+  const giveUp=setTimeout(()=>{                       // ما رد خلال 12 ثانية
+    if(NET&&NET.peer===peer&&!peer.open){
+      try{peer.destroy()}catch(e){}
+      if(tries<2){ netStatus("نحاول مرة ثانية…"); return hostRoom(name,cap,tries+1); }
+      ovShow(`<div class="hero sm"><h2>الاتصال ما ضبط</h2>
+        <p>وسيط الاتصال ما رد. جرّب مرة ثانية، ولو تكررت جرّب من شبكة ثانية أو أطفئ الـVPN.</p></div>
+        <div class="ctl"><button class="act b-brass" onclick="ovHide();hostRoom('${esc(name)}',${cap})">حاول مرة ثانية</button>
+        <button class="act b-quiet" onclick="leaveRoom()">رجوع</button></div>`);
+    }
+  },12000);
+  peer.on("open",()=>clearTimeout(giveUp));
   NET={peer,isHost:true,code,me:name,seat:0,role:"player",cap,chat:[],
        bots:0,botDiff:"mid",
        roster:[{cid:CID,name,seat:0,role:"player",conn:null,online:true}]};
   keepAlive(peer);
   peer.on("open",()=>{keepAwake(true);lobbyHost();});
   peer.on("error",e=>{
-    if(e.type==="unavailable-id"){try{peer.destroy()}catch(x){} NET=null;return hostRoom(name,cap);}
+    if(e.type==="unavailable-id"){                    // الرمز محجوز — نجرّب رمز غيره
+      clearTimeout(giveUp);
+      try{peer.destroy()}catch(x){} NET=null;
+      if(tries<5)return hostRoom(name,cap,tries+1);
+    }
+    if(e.type==="network"||e.type==="server-error"||e.type==="socket-error"){
+      netStatus("الشبكة تعبانة — نحاول…",true); return;
+    }
     netStatus("مشكلة اتصال: "+e.type,true);
   });
   wireHostConnections(peer);
