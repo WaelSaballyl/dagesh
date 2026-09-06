@@ -1,0 +1,9 @@
+Sound effects used in Dagesh
+============================
+Source : Kenney (https://kenney.nl) — Casino Audio, Impact Sounds,
+         Interface Sounds, and Music Jingles packs.
+License: CC0 1.0 Universal (public domain dedication).
+         https://creativecommons.org/publicdomain/zero/1.0/
+
+Files were converted from .ogg to .mp3, trimmed and level-matched.
+No attribution is required under CC0, but it is given here anyway.

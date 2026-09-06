@@ -66,6 +66,8 @@ https://dagesh.netlify.app/?room=12345
 ## رسوم الأوراق
 
 صور الأوراق الـ52 من **Vectorized Playing Cards 1.3** — Copyright 2011 Chris Aguilar، برخصة LGPL 3.
+
+المؤثرات الصوتية من مكتبات **Kenney** الصوتية (Casino Audio، Impact Sounds، Interface Sounds، Music Jingles) برخصة CC0 — مُحوّلة لـ mp3 ومضبوطة المستوى.
 نسخة منها محفوظة في مجلد `cards/`، والموقع يحمّلها من jsDelivr مع الرجوع للنسخة المحلية إذا تعذّر،
 وإذا فشل الاثنان يرسم الموقع الورقة بنفسه بـ SVG. يعني اللعبة ما تتعطّل أبداً بسبب الصور.
 

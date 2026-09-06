@@ -903,14 +903,52 @@ function endScreen(win,standings,why,party){
 }
 
 /* ================= الصوت =================
-   كل الأصوات مبنية من ضجيج مفلتر — ورق حقيقي وفيش، بدون أي نغمات. */
-let AC=null, MUTED=(()=>{try{return localStorage.getItem("dagesh-mute")==="1"}catch(e){return false}})();
+   ملفات صوت حقيقية من Kenney (رخصة CC0) — ورق ينرمى، فيش، وجنقل فوز.
+   تنحمّل مرة وحدة أول ما يلمس اللاعب الشاشة، وتنعزف من الذاكرة عشان ما يصير تأخير. */
+const SFXDIR="sfx/";
+const SFXFILES=["card1","card2","card3","card4","slide1","slide2","slide3","slide4",
+  "fold1","fold2","shuffle","fan","chip1","chip2","chip3","chipsWin","chipsHit",
+  "boom1","boom2","boomLow","win","win2","lose","party","turn"];
+let AC=null, BUF=Object.create(null), SFXASKED=false;
+let MUTED=(()=>{try{return localStorage.getItem("dagesh-mute")==="1"}catch(e){return false}})();
+
 function ac(){ if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
   if(AC&&AC.state==="suspended")AC.resume(); return AC; }
 
-/* دفقة ضجيج بمرشّح — الأساس اللي نبني منه صوت الورق والفيش */
-function nz(o){
+function sfxLoad(){
+  if(SFXASKED)return; SFXASKED=true;
   const c=ac(); if(!c)return;
+  SFXFILES.forEach(n=>{
+    fetch(SFXDIR+n+".mp3")
+      .then(r=>r.ok?r.arrayBuffer():Promise.reject(0))
+      .then(b=>new Promise((ok,no)=>c.decodeAudioData(b,ok,no)))
+      .then(x=>{BUF[n]=x;}).catch(()=>{});
+  });
+}
+/* المتصفح ما يسمح بصوت قبل أول لمسة — نجهّز عندها */
+["pointerdown","touchstart","keydown"].forEach(ev=>
+  addEventListener(ev,()=>{ac();sfxLoad();},{once:true,passive:true}));
+
+const pickOne=a=>a[(Math.random()*a.length)|0];
+const vary=()=>0.94+Math.random()*0.13;          // فرق بسيط بالنبرة عشان ما تتكرر نفس الصوت
+
+function play(name,vol,at,rate){
+  if(MUTED)return;
+  const c=ac(); if(!c)return;
+  const b=BUF[name]; if(!b)return;               // لسه ما وصل الملف — نتجاهل بهدوء
+  try{
+    const src=c.createBufferSource(); src.buffer=b;
+    src.playbackRate.value=rate||1;
+    const g=c.createGain(); g.gain.value=(vol==null?.6:vol);
+    src.connect(g); g.connect(c.destination);
+    const t=c.currentTime+(at||0);
+    src.start(t);
+  }catch(e){}
+}
+
+/* دفقة ضجيج مفلتر — باقية لصفير الصاروخ بس، لأن ما فيه تسجيل مناسب له */
+function nz(o){
+  const c=ac(); if(!c||MUTED)return;
   const dur=o.dur, n=Math.max(1,Math.floor(c.sampleRate*dur));
   const buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
   const sh=o.shape||3;
@@ -925,46 +963,33 @@ function nz(o){
   src.connect(f);f.connect(g);g.connect(c.destination);
   src.start(t0); src.stop(t0+dur+0.02);
 }
-const rnd2=(a,b)=>a+Math.random()*(b-a);
 
-/* ورقة تنحط على الطاولة: صفعة قصيرة + جسم منخفض */
-function sCard(v,at){
-  v=v||1; at=at||0;
-  nz({dur:.07,vol:.34*v,f:rnd2(2400,3200),to:rnd2(600,900),q:.9,at});
-  nz({dur:.05,vol:.20*v,f:rnd2(150,220),q:.8,type:"lowpass",at:at+.004,shape:4});
-}
-/* ورقة تنسحب أو تنزلق */
-function sSlide(v,at){
-  v=v||1; at=at||0;
-  nz({dur:.15,vol:.16*v,f:1100,to:rnd2(2800,3600),q:.7,at,shape:1.6});
-}
-/* فيشة */
-function sChip(at){
-  at=at||0;
-  nz({dur:.028,vol:.26,f:rnd2(3200,4200),q:3.4,at});
-  nz({dur:.032,vol:.20,f:rnd2(2200,2800),q:3.0,at:at+.045});
-}
+function sCard(v,at){ play(pickOne(["card1","card2","card3","card4"]),.55*(v||1),at||0,vary()); }
+function sSlide(v,at){ play(pickOne(["slide1","slide2","slide3","slide4"]),.42*(v||1),at||0,vary()); }
+function sChip(at){ play(pickOne(["chip1","chip2","chip3"]),.55,at||0,vary()); }
+
 function sfx(kind){
   if(MUTED)return;
   try{
     switch(kind){
-      case "deal":   for(let k=0;k<4;k++)sCard(.85,k*.105); break;
+      case "deal":   play("fan",.45,0,1);
+                     for(let k=0;k<4;k++)sCard(.8,.18+k*.12); break;
       case "card":   sCard(1); break;
+      case "shuffle":play("shuffle",.42); break;
       case "chip":   sChip(0); break;
-      case "fold":   sSlide(1); break;
-      case "turn":   nz({dur:.04,vol:.13,f:1500,q:2.2}); break;
-      case "dagesh": for(let k=0;k<3;k++)sCard(1.1,k*.075); break;
-      case "win":    for(let k=0;k<6;k++)sChip(k*.055+Math.random()*.02); break;
-      case "lose":   sSlide(.9); nz({dur:.07,vol:.14,f:170,q:.8,type:"lowpass",at:.05,shape:4}); break;
-      case "msg":    nz({dur:.022,vol:.10,f:2900,q:4}); break;
+      case "fold":   play(pickOne(["fold1","fold2"]),.5,0,vary()); break;
+      case "turn":   play("turn",.42); break;
+      case "dagesh": sCard(1,0); sCard(1,.085); sCard(1,.17);
+                     play("chipsHit",.5,.24); break;
+      case "win":    play(pickOne(["win","win2"]),.6);
+                     play("chipsWin",.5,.12); break;
+      case "lose":   play("lose",.45); break;
+      case "msg":    play("turn",.2,0,1.25); break;
       case "rocket": nz({dur:.55,vol:.10,f:280,to:2600,q:3.2,shape:.9}); break;
-      case "boom":   nz({dur:.30,vol:.34,f:190,q:.7,type:"lowpass",shape:2.4});
-                     nz({dur:.22,vol:.20,f:2000,to:520,q:.9,at:.01});
-                     for(let k=0;k<8;k++)nz({dur:.05,vol:.10,f:2600+Math.random()*2200,q:5,at:.12+k*.045});
-                     break;
-      case "party":  for(let k=0;k<7;k++)setTimeout(()=>{sfx("rocket");
-                       setTimeout(()=>sfx("boom"),520);},k*640);
-                     for(let k=0;k<10;k++)sChip(k*.07);
+      case "boom":   play(pickOne(["boom1","boom2","boomLow"]),.5,0,vary()); break;
+      case "party":  play("party",.7);
+                     play("chipsWin",.5,.35);
+                     for(let k=0;k<8;k++)sChip(1.1+k*.07);
                      break;
     }
   }catch(e){}
@@ -973,7 +998,7 @@ function toggleMute(){
   MUTED=!MUTED;
   try{localStorage.setItem("dagesh-mute",MUTED?"1":"0")}catch(e){}
   const b=$("bMute"); if(b)b.textContent=MUTED?"🔇":"🔊";
-  if(!MUTED)sCard(.9);
+  if(!MUTED){ sfxLoad(); sCard(.9); }
 }
 
 /* ================= احتفال الفوز ================= */
@@ -1475,6 +1500,7 @@ function rules(){
     ولو أحد فلّس وبقيتم اثنين (أو ثلاثة إذا بدأتم 7 فأكثر)، الأعلى رصيداً يفوز.</div>
 
   <p class="credit">رسوم الأوراق: Vectorized Playing Cards 1.3 — Copyright 2011 Chris Aguilar، برخصة LGPL 3.</p>
+  <p class="credit">الأصوات: مكتبات Kenney الصوتية (Casino / Impact / Interface / Music Jingles) برخصة CC0.</p>
   <button class="act b-brass wide" onclick="closeRules()">فهمت، يالله نلعب</button>`);
 }
 function setup(){
