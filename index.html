@@ -232,6 +232,20 @@ button.act[disabled]{opacity:.35;cursor:not-allowed}
 .rail h3{font-size:10px;letter-spacing:.26em;color:var(--ink-3);margin-bottom:10px;
   font-family:"IBM Plex Sans Arabic";font-weight:600}
 .logbox{display:flex;flex-direction:column;font-size:12px;max-height:340px;overflow-y:auto}
+.chatbox{display:flex;flex-direction:column;font-size:12.5px;max-height:180px;overflow-y:auto;
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  background:var(--paper-2);border-radius:var(--r);padding:4px 10px}
+.chatbox:empty{display:none}
+.chatbox p{margin:0;color:var(--ink-2);padding:6px 0;border-bottom:1px solid var(--rule);line-height:1.55;
+  overflow-wrap:anywhere}
+.chatbox p:last-child{border-bottom:0}
+.chatbox p b{color:var(--ink);font-weight:600}
+.chatbox p.mine b{color:var(--warn)}
+.chatrow{display:flex;gap:8px;margin-top:8px}
+.chatrow input{flex:1;min-width:0;font:inherit;font-size:16px;padding:10px 12px;border-radius:var(--r);
+  background:var(--paper-2);border:1px solid var(--rule-2);color:var(--ink)}
+.chatrow input:focus{outline:none;border-color:var(--warn)}
+.chatrow button{flex:0 0 auto;padding-inline:14px}
 .logbox p{margin:0;color:var(--ink-2);padding:7px 0;border-bottom:1px solid var(--rule);line-height:1.5}
 .logbox p:last-child{border-bottom:0}
 .logbox p.hi{color:var(--ink);font-weight:600}
@@ -253,10 +267,15 @@ button.act[disabled]{opacity:.35;cursor:not-allowed}
 
 /* ---------- النوافذ ---------- */
 .ov{position:fixed;inset:0;z-index:20;background:color-mix(in srgb,var(--paper) 82%,transparent);
-  backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px}
+  backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;
+  overscroll-behavior:contain;touch-action:none}
 .ov[hidden]{display:none}
+/* وقت ما تكون النافذة مفتوحة، الخلفية تتثبّت — قبل كان السحب يمرّر الصفحة اللي تحت */
+body.noscroll{position:fixed;inset-inline:0;width:100%;overflow:hidden}
 .sheet{background:var(--paper);border:2px solid var(--ink);border-radius:14px;padding:26px;
-  max-width:520px;width:100%;max-height:88vh;overflow-y:auto;animation:rise .28s cubic-bezier(.2,.9,.3,1)}
+  max-width:520px;width:100%;max-height:88vh;max-height:88dvh;overflow-y:auto;
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;
+  animation:rise .28s cubic-bezier(.2,.9,.3,1)}
 @keyframes rise{from{transform:translateY(12px);opacity:0}}
 .sheet h2{font-size:28px;margin-bottom:8px}
 .sheet p,.sheet li{color:var(--ink-2);font-size:13.5px}
@@ -964,31 +983,31 @@ function nz(o){
   src.start(t0); src.stop(t0+dur+0.02);
 }
 
-function sCard(v,at){ play(pickOne(["card1","card2","card3","card4"]),.55*(v||1),at||0,vary()); }
-function sSlide(v,at){ play(pickOne(["slide1","slide2","slide3","slide4"]),.42*(v||1),at||0,vary()); }
-function sChip(at){ play(pickOne(["chip1","chip2","chip3"]),.55,at||0,vary()); }
+function sCard(v,at){ play(pickOne(["card1","card2","card3","card4"]),.30*(v||1),at||0,vary()); }
+function sSlide(v,at){ play(pickOne(["slide1","slide2","slide3","slide4"]),.24*(v||1),at||0,vary()); }
+function sChip(at){ play(pickOne(["chip1","chip2","chip3"]),.32,at||0,vary()); }
 
 function sfx(kind){
   if(MUTED)return;
   try{
     switch(kind){
-      case "deal":   play("fan",.45,0,1);
-                     for(let k=0;k<4;k++)sCard(.8,.18+k*.12); break;
+      case "deal":   play("fan",.26,0,1);
+                     for(let k=0;k<4;k++)sCard(.62,.18+k*.12); break;
       case "card":   sCard(1); break;
-      case "shuffle":play("shuffle",.42); break;
+      case "shuffle":play("shuffle",.24); break;
       case "chip":   sChip(0); break;
-      case "fold":   play(pickOne(["fold1","fold2"]),.5,0,vary()); break;
-      case "turn":   play("turn",.42); break;
+      case "fold":   play(pickOne(["fold1","fold2"]),.28,0,vary()); break;
+      case "turn":   play("turn",.22); break;
       case "dagesh": sCard(1,0); sCard(1,.085); sCard(1,.17);
-                     play("chipsHit",.5,.24); break;
-      case "win":    play(pickOne(["win","win2"]),.6);
-                     play("chipsWin",.5,.12); break;
-      case "lose":   play("lose",.45); break;
-      case "msg":    play("turn",.2,0,1.25); break;
-      case "rocket": nz({dur:.55,vol:.10,f:280,to:2600,q:3.2,shape:.9}); break;
-      case "boom":   play(pickOne(["boom1","boom2","boomLow"]),.5,0,vary()); break;
-      case "party":  play("party",.7);
-                     play("chipsWin",.5,.35);
+                     play("chipsHit",.3,.24); break;
+      case "win":    play(pickOne(["win","win2"]),.34);
+                     play("chipsWin",.28,.12); break;
+      case "lose":   play("lose",.26); break;
+      case "msg":    play("turn",.11,0,1.25); break;
+      case "rocket": nz({dur:.55,vol:.055,f:280,to:2600,q:3.2,shape:.9}); break;
+      case "boom":   play(pickOne(["boom1","boom2","boomLow"]),.3,0,vary()); break;
+      case "party":  play("party",.4);
+                     play("chipsWin",.28,.35);
                      for(let k=0;k<8;k++)sChip(1.1+k*.07);
                      break;
     }
@@ -1417,8 +1436,22 @@ function uResp(r){
 }
 
 /* ---- شاشات ---- */
-function ovShow(h){$("sheet").innerHTML=h;$("ov").hidden=false;}
-function ovHide(){$("ov").hidden=true;}
+let SCROLLY=0;
+function lockScroll(on){
+  const b=document.body;
+  if(on){
+    if(b.classList.contains("noscroll"))return;
+    SCROLLY=window.scrollY||window.pageYOffset||0;
+    b.style.top=(-SCROLLY)+"px"; b.classList.add("noscroll");
+  }else{
+    if(!b.classList.contains("noscroll"))return;
+    b.classList.remove("noscroll"); b.style.top="";
+    window.scrollTo(0,SCROLLY);
+  }
+}
+function ovShow(h){ const sh=$("sheet"); sh.innerHTML=h; sh.scrollTop=0;
+  $("ov").hidden=false; lockScroll(true); }
+function ovHide(){ $("ov").hidden=true; lockScroll(false); }
 function revealSheet(shown,winners,over){
   const rows=shown.slice().sort((a,b)=>cmp(b.eval,a.eval)).map(p=>{
     const w=winners.includes(p);
@@ -1789,8 +1822,8 @@ function applyAct(seat,type,pl){
 function chatPush(name,text){
   if(!NET)return;
   NET.chat=NET.chat||[];
-  NET.chat.unshift({name,text:String(text).slice(0,160)});
-  if(NET.chat.length>40)NET.chat.pop();
+  NET.chat.push({name,text:String(text).slice(0,160)});   // الأحدث تحت زي أي شات
+  if(NET.chat.length>40)NET.chat.shift();
   if(isHost())broadcast({t:"chat",list:NET.chat});
   sfx("msg"); renderChat();
 }
@@ -1802,7 +1835,11 @@ function chatSend(){
 }
 function renderChat(){
   const box=$("chatBox"); if(!box||!NET)return;
-  box.innerHTML=(NET.chat||[]).map(m=>`<p><b>${esc(m.name)}</b> ${esc(m.text)}</p>`).join("");
+  /* لو كان اللاعب طالع فوق يقرأ القديم ما نزعجه، وإلا ننزل لآخر رسالة */
+  const stick = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  box.innerHTML=(NET.chat||[]).map(m=>
+    `<p class="${m.name===NET.me?"mine":""}"><b>${esc(m.name)}</b> ${esc(m.text)}</p>`).join("");
+  if(stick)box.scrollTop=box.scrollHeight;
 }
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
