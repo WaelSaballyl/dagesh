@@ -439,6 +439,14 @@ input[type=range]::-moz-range-thumb{width:32px;height:32px;border-radius:50%;bac
   border:3px solid var(--paper);box-shadow:0 3px 12px rgba(0,0,0,.6)}
 input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
 
+.botbox{border:1px solid var(--rule);border-radius:12px;padding:13px 14px;margin:14px 0}
+.botbox .opt{margin-bottom:11px}
+.botbox .opt:last-of-type{margin-bottom:0}
+.botnote{font-size:12px;color:var(--ink-3);margin:11px 0 0;line-height:1.6}
+.botnote b{color:var(--warn);font-family:"Alexandria",sans-serif}
+.bot-tag{font-size:9.5px;color:var(--ink-3);border:1px solid var(--rule-2);border-radius:3px;padding:1px 5px}
+.lobby-p.bot .dot{background:var(--warn);box-shadow:none}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -1544,8 +1552,11 @@ function sendTo(r,msg){ if(r.conn&&r.conn.open){try{r.conn.send(msg)}catch(e){}}
 function broadcast(msg){ for(const r of NET.roster) if(r.cid!==CID) sendTo(r,msg); }
 
 function rosterMsg(){
+  const bots=(S&&S.phase&&NET.botSeats!=null)
+    ? S.players.slice(NET.botSeats).map(p=>({cid:"bot"+p.i,name:p.name,seat:p.i,online:true,bot:true}))
+    : [];
   return {t:"roster",
-    players:players_().map(r=>({cid:r.cid,name:r.name,seat:r.seat,online:r.online})),
+    players:players_().map(r=>({cid:r.cid,name:r.name,seat:r.seat,online:r.online})).concat(bots),
     specs:specs_().map(r=>({cid:r.cid,name:r.name,online:r.online})),
     cap:NET.cap, started:!!(S&&S.phase)};
 }
@@ -1655,6 +1666,7 @@ function hostRoom(name,cap){
   const code=mkCode();
   const peer=new Peer(peerIdFor(code),PEEROPTS);
   NET={peer,isHost:true,code,me:name,seat:0,role:"player",cap,chat:[],
+       bots:0,botDiff:"mid",
        roster:[{cid:CID,name,seat:0,role:"player",conn:null,online:true}]};
   keepAlive(peer);
   peer.on("open",()=>{keepAwake(true);lobbyHost();});
@@ -1835,11 +1847,12 @@ function becomeHost(peer,code,myName,snap,known){
 }
 /* ---------- شاشات الغرفة ---------- */
 function rosterRows(list,specs,canKick){
-  const rows=list.map(r=>`<div class="lobby-p ${r.online?"":"off"}">
+  const rows=list.map(r=>`<div class="lobby-p ${r.online?"":"off"} ${r.bot?"bot":""}">
       <span class="dot"></span><span>${esc(r.name)}</span>
+      ${r.bot?'<span class="bot-tag">بوت</span>':""}
       ${r.cid===CID?'<span class="me">أنت</span>':""}
       ${r.online?"":'<span class="off-tag">منقطع</span>'}
-      ${canKick&&r.cid!==CID?`<button class="kick" onclick="kick('${r.cid}')" title="اطرده">×</button>`:""}
+      ${canKick&&r.cid!==CID&&!r.bot?`<button class="kick" onclick="kick('${r.cid}')" title="اطرده">×</button>`:""}
     </div>`).join("");
   const sp=(specs&&specs.length)?`<div class="spec-head">متفرّجون (${specs.length})</div>`+
     specs.map(r=>`<div class="lobby-p spec"><span class="dot sp"></span><span>${esc(r.name)}</span>
@@ -1847,17 +1860,36 @@ function rosterRows(list,specs,canKick){
       ${canKick&&r.cid!==CID?`<button class="kick" onclick="kick('${r.cid}')">×</button>`:""}</div>`).join(""):"";
   return rows+sp;
 }
+function setBots(n){ if(!NET)return; NET.bots=Math.max(0,Math.min(13-players_().length,n)); lobbyHost(); }
+function setBotDiff(d){ if(!NET)return; NET.botDiff=d; lobbyHost(); }
+
 function lobbyHost(){
   if(!NET||!NET.roster)return;
   const ps=players_(), sp=specs_();
+  const bots=Math.min(NET.bots||0,13-ps.length), total=ps.length+bots;
   const link=location.origin+location.pathname+"?room="+NET.code;
   ovShow(`<div class="hero sm"><h2>غرفة داقش</h2><p>عطِ أصحابك الرمز، أو أرسل لهم الرابط ويدخلون على طول.</p></div>
    <div class="roomcode">${NET.code}</div>
    <div class="lobby-list">${rosterRows(ps,sp,true)}</div>
    <p style="font-size:12.5px;text-align:center;color:var(--ink-3)">
-     ${ps.length} من ${NET.cap} — تحتاجون 4 على الأقل${sp.length?` · و${sp.length} متفرّج`:""}</p>
-   <div class="ctl"><button class="act b-brass" ${ps.length<4?"disabled":""} onclick="startOnline()">
-       ابدأ اللعب${ps.length>=4?` (${ps.length})`:""}</button>
+     ${ps.length} من ${NET.cap}${sp.length?` · و${sp.length} متفرّج`:""}</p>
+
+   <div class="botbox">
+     <div class="opt"><label>بوتات يلعبون معكم</label><div class="segs tight" id="sB">
+       ${Array.from({length:Math.min(10,13-ps.length)+1},(_,k)=>k).map(k=>
+         `<button data-v="${k}" aria-pressed="${k===bots}" onclick="setBots(${k})">${k===0?"بدون":k}</button>`).join("")}
+     </div></div>
+     ${bots>0?`<div class="opt"><label>مستوى البوتات</label><div class="segs" id="sBD">
+       ${[["easy","سهل"],["mid","متوسط"],["hard","صعب"]].map(([v,t])=>
+         `<button data-v="${v}" aria-pressed="${v===NET.botDiff}" onclick="setBotDiff('${v}')">${t}</button>`).join("")}
+     </div></div>`:""}
+     <p class="botnote">${total>=4
+        ? `الطاولة بتكون <b>${total}</b> لاعبين — ${ps.length} منكم${bots?` و${bots} بوت`:""}.`
+        : `تحتاجون <b>4</b> على الطاولة — ناقصكم ${4-total}. زيدوا بوتات أو انتظروا أصحابكم.`}</p>
+   </div>
+
+   <div class="ctl"><button class="act b-brass" ${total<4?"disabled":""} onclick="startOnline()">
+       ابدأ اللعب${total>=4?` (${total})`:""}</button>
    <button class="act b-quiet" onclick="copyLink(this,'${link}')">انسخ الرابط</button></div>
    <div class="ctl"><button class="act b-quiet" onclick="leaveRoom()">إلغاء الغرفة ورجوع</button></div>
    <div class="warn"><b>خلّ الصفحة مفتوحة</b> وشاشتك صاحية طول اللعب — انت المضيف، ولو قفلتها انقطعت الغرفة على الكل.</div>
@@ -1874,16 +1906,21 @@ function lobbyGuest(){
 }
 function startOnline(){
   const ps=players_();
-  const names=ps.map(r=>r.name);
   ps.forEach((r,k)=>r.seat=k);                  // نرصّ المقاعد قبل البداية
+  const bots=Math.min(NET.bots||0,13-ps.length);
+  const botNames=BOTNAMES.slice(0,bots);
+  const names=ps.map(r=>r.name).concat(botNames);
   NET.seat=ps.findIndex(r=>r.cid===CID);
+  NET.botSeats=names.length-bots;               // البوتات تجي بعد البشر
   ovHide();
-  newSession(names.length,"online","mid",names);
-  S.players.forEach(p=>p.bot=false);
+  newSession(names.length,"online",NET.botDiff||"mid",names);
+  S.players.forEach((p,k)=>p.bot = k>=NET.botSeats);   // البشر لا، البوتات نعم
   S.viewer=NET.seat;
+  if(bots)say(`${bots} بوت دخلوا الطاولة (${{easy:"سهل",mid:"متوسط",hard:"صعب"}[NET.botDiff||"mid"]})`,"hi");
   saveRoom();
   broadcast(rosterMsg());
   pushState();render();
+  advance();                                     // لو أول دور لبوت يتحرّك
 }
 /* نحفظ آخر غرفة عشان اللي يطلع يقدر يرجع لها بضغطة */
 function saveRoom(){
