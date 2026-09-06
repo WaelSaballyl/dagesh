@@ -313,6 +313,22 @@ body.noscroll{position:fixed;inset-inline:0;width:100%;overflow:hidden}
 .warn{font-size:12px;color:var(--ink-2);border-inline-start:2px solid var(--rule-2);
   padding-inline-start:11px;margin-top:12px;line-height:1.65}
 .conn{font-size:12px;color:var(--ink-3);text-align:center}
+.pc-note{font-size:11.5px;color:var(--ink-3);margin:8px 0 0;line-height:1.6}
+.pc-or{display:flex;align-items:center;gap:10px;margin:14px 0 10px;color:var(--ink-3);font-size:11px}
+.pc-or::before,.pc-or::after{content:"";flex:1;height:1px;background:var(--rule)}
+.brw-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--rule)}
+.brw-row:last-child{border-bottom:0}
+.brw-i{display:flex;flex-direction:column;gap:2px;min-width:0}
+.brw-i b{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brw-i span{font-size:11.5px;color:var(--ink-3)}
+.brw-row .act{margin-inline-start:auto;flex:none}
+.act.sm{padding:9px 15px;font-size:13px}
+.pubrow{display:flex;align-items:center;gap:10px;margin:14px 0 4px;padding:12px 0;
+  border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.pubrow div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pubrow b{font-size:13.5px}
+.pubrow span{font-size:11.5px;color:var(--ink-3);line-height:1.55}
+.pubrow .act{margin-inline-start:auto;flex:none}
 .conn.bad{color:var(--accent)}
 
 
@@ -485,7 +501,7 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
     <h1>داقش</h1>
     <span class="sub">لعبة مساومة</span>
     <nav>
-      <button class="tbtn" id="bMute" title="الصوت">🔊</button>
+      <button class="tbtn" id="bMute" title="الصوت">🔉</button>
       <button class="tbtn" id="bRules">القواعد</button>
       <button class="tbtn" id="bNew">جلسة جديدة</button>
     </nav>
@@ -928,11 +944,32 @@ const SFXDIR="sfx/";
 const SFXFILES=["card1","card2","card3","card4","slide1","slide2","slide3","slide4",
   "fold1","fold2","shuffle","fan","chip1","chip2","chip3","chipsWin","chipsHit",
   "boom1","boom2","boomLow","win","win2","lose","party","turn"];
-let AC=null, BUF=Object.create(null), SFXASKED=false;
-let MUTED=(()=>{try{return localStorage.getItem("dagesh-mute")==="1"}catch(e){return false}})();
+let AC=null, BUF=Object.create(null), SFXASKED=false, MG=null;
+
+/* ثلاث درجات: هادي (الافتراضي)، عادي، صامت */
+const VOLS=[{k:"soft",g:.32,ic:"🔉"},{k:"loud",g:.62,ic:"🔊"},{k:"off",g:0,ic:"🔇"}];
+let VOLI=(()=>{ try{ const v=localStorage.getItem("dagesh-vol");
+    if(v!==null){const i=+v; if(i>=0&&i<VOLS.length)return i;}
+    if(localStorage.getItem("dagesh-mute")==="1")return 2;
+  }catch(e){} return 0; })();
+let MUTED=VOLS[VOLI].g===0;
 
 function ac(){ if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
   if(AC&&AC.state==="suspended")AC.resume(); return AC; }
+
+/* كل الأصوات تمر من هنا. الفلتر المنخفض يشيل الحدّة اللي تعوّر الأذن
+   من تسجيلات قصيرة زي الورق والفيش، والعالي يشيل الطنين المكتوم. */
+function bus(){
+  const c=ac(); if(!c)return null;
+  if(!MG){
+    MG=c.createGain();
+    const lp=c.createBiquadFilter(); lp.type="lowpass";  lp.frequency.value=4600; lp.Q.value=.55;
+    const hp=c.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=120;  hp.Q.value=.7;
+    MG.connect(lp); lp.connect(hp); hp.connect(c.destination);
+  }
+  MG.gain.value=VOLS[VOLI].g;
+  return MG;
+}
 
 function sfxLoad(){
   if(SFXASKED)return; SFXASKED=true;
@@ -953,21 +990,24 @@ const vary=()=>0.94+Math.random()*0.13;          // فرق بسيط بالنبر
 
 function play(name,vol,at,rate){
   if(MUTED)return;
-  const c=ac(); if(!c)return;
+  const c=ac(), out=bus(); if(!c||!out)return;
   const b=BUF[name]; if(!b)return;               // لسه ما وصل الملف — نتجاهل بهدوء
   try{
     const src=c.createBufferSource(); src.buffer=b;
     src.playbackRate.value=rate||1;
-    const g=c.createGain(); g.gain.value=(vol==null?.6:vol);
-    src.connect(g); g.connect(c.destination);
-    const t=c.currentTime+(at||0);
+    const g=c.createGain();
+    const t=c.currentTime+(at||0), v=(vol==null?.3:vol);
+    /* صعود بسيط 8 ملّي — يكسر الطقّة الحادة في أول الصوت */
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(v,t+0.008);
+    src.connect(g); g.connect(out);
     src.start(t);
   }catch(e){}
 }
 
 /* دفقة ضجيج مفلتر — باقية لصفير الصاروخ بس، لأن ما فيه تسجيل مناسب له */
 function nz(o){
-  const c=ac(); if(!c||MUTED)return;
+  const c=ac(), out=bus(); if(!c||!out||MUTED)return;
   const dur=o.dur, n=Math.max(1,Math.floor(c.sampleRate*dur));
   const buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
   const sh=o.shape||3;
@@ -979,45 +1019,48 @@ function nz(o){
   if(o.to)f.frequency.exponentialRampToValueAtTime(o.to,t0+dur);
   f.Q.value=o.q||1;
   const g=c.createGain(); g.gain.value=o.vol;
-  src.connect(f);f.connect(g);g.connect(c.destination);
+  src.connect(f);f.connect(g);g.connect(out);
   src.start(t0); src.stop(t0+dur+0.02);
 }
 
-function sCard(v,at){ play(pickOne(["card1","card2","card3","card4"]),.30*(v||1),at||0,vary()); }
-function sSlide(v,at){ play(pickOne(["slide1","slide2","slide3","slide4"]),.24*(v||1),at||0,vary()); }
-function sChip(at){ play(pickOne(["chip1","chip2","chip3"]),.32,at||0,vary()); }
+function sCard(v,at){ play(pickOne(["card1","card2","card3","card4"]),.22*(v||1),at||0,vary()); }
+function sSlide(v,at){ play(pickOne(["slide1","slide2","slide3","slide4"]),.16*(v||1),at||0,vary()); }
+function sChip(at){ play(pickOne(["chip1","chip2","chip3"]),.22,at||0,vary()); }
 
 function sfx(kind){
   if(MUTED)return;
   try{
     switch(kind){
-      case "deal":   play("fan",.26,0,1);
-                     for(let k=0;k<4;k++)sCard(.62,.18+k*.12); break;
+      case "deal":   play("fan",.15,0,1);
+                     for(let k=0;k<4;k++)sCard(.5,.2+k*.13); break;
       case "card":   sCard(1); break;
-      case "shuffle":play("shuffle",.24); break;
+      case "shuffle":play("shuffle",.15); break;
       case "chip":   sChip(0); break;
-      case "fold":   play(pickOne(["fold1","fold2"]),.28,0,vary()); break;
-      case "turn":   play("turn",.22); break;
+      case "fold":   play(pickOne(["fold1","fold2"]),.18,0,vary()); break;
+      case "turn":   play("turn",.12); break;
       case "dagesh": sCard(1,0); sCard(1,.085); sCard(1,.17);
-                     play("chipsHit",.3,.24); break;
-      case "win":    play(pickOne(["win","win2"]),.34);
-                     play("chipsWin",.28,.12); break;
-      case "lose":   play("lose",.26); break;
-      case "msg":    play("turn",.11,0,1.25); break;
-      case "rocket": nz({dur:.55,vol:.055,f:280,to:2600,q:3.2,shape:.9}); break;
-      case "boom":   play(pickOne(["boom1","boom2","boomLow"]),.3,0,vary()); break;
-      case "party":  play("party",.4);
-                     play("chipsWin",.28,.35);
-                     for(let k=0;k<8;k++)sChip(1.1+k*.07);
+                     play("chipsHit",.18,.26); break;
+      case "win":    play(pickOne(["win","win2"]),.30);
+                     play("chipsWin",.17,.14); break;
+      case "lose":   play("lose",.19); break;
+      case "msg":    play("turn",.07,0,1.25); break;
+      case "rocket": nz({dur:.55,vol:.035,f:280,to:2600,q:3.2,shape:.9}); break;
+      case "boom":   play(pickOne(["boom1","boom2","boomLow"]),.22,0,vary()); break;
+      case "party":  play("party",.34);
+                     play("chipsWin",.18,.38);
+                     for(let k=0;k<6;k++)sChip(1.2+k*.09);
                      break;
     }
   }catch(e){}
 }
-function toggleMute(){
-  MUTED=!MUTED;
-  try{localStorage.setItem("dagesh-mute",MUTED?"1":"0")}catch(e){}
-  const b=$("bMute"); if(b)b.textContent=MUTED?"🔇":"🔊";
-  if(!MUTED){ sfxLoad(); sCard(.9); }
+function volIcon(){ const b=$("bMute"); if(b){ b.textContent=VOLS[VOLI].ic;
+  b.title={soft:"صوت هادي",loud:"صوت عادي",off:"بدون صوت"}[VOLS[VOLI].k]; } }
+function toggleMute(){                       // هادي ← عادي ← صامت
+  VOLI=(VOLI+1)%VOLS.length;
+  MUTED=VOLS[VOLI].g===0;
+  try{localStorage.setItem("dagesh-vol",String(VOLI))}catch(e){}
+  volIcon();
+  if(!MUTED){ sfxLoad(); bus(); sCard(.9); }
 }
 
 /* ================= احتفال الفوز ================= */
@@ -1562,6 +1605,10 @@ function setup(){
         <p class="pc-sub">انت المضيف، وترسل الرمز لأصحابك.</p>
         <div class="opt"><label>أكبر عدد لاعبين</label><div class="segs tight" id="sC">
           ${[4,5,6,7,8,9,10,11,12,13].map(x=>`<button data-v="${x}" aria-pressed="${x===6}">${x}</button>`).join("")}</div></div>
+        <div class="opt"><label>مين يقدر يدخل</label><div class="segs" id="sP">
+          <button data-v="0" aria-pressed="true">اللي عنده الرمز</button>
+          <button data-v="1">أي أحد</button></div></div>
+        <p class="pc-note" id="pubNote">غرفة خاصة — ما تبين لأحد.</p>
         <button class="act b-brass wide" id="mk">أنشئ الغرفة</button>
       </div>
 
@@ -1571,6 +1618,9 @@ function setup(){
         <input id="fCode" class="code" maxlength="5" placeholder="00000"
           inputmode="numeric" pattern="[0-9]*" autocomplete="off">
         <button class="act b-brass wide" id="jn" disabled>ادخل الغرفة</button>
+        <div class="pc-or"><span>أو</span></div>
+        <button class="act b-quiet wide" id="brw">شوف الغرف المفتوحة</button>
+        <p class="pc-note">ما عندك أحد؟ ادخل على غرفة ناس ينتظرون.</p>
       </div>
     </div>
   </div>
@@ -1595,8 +1645,12 @@ function setup(){
     const b=e.target.closest("button");if(!b)return;
     [...e.currentTarget.children].forEach(x=>x.setAttribute("aria-pressed","false"));
     b.setAttribute("aria-pressed","true");cb(b.dataset.v);});
-  let cap=6;
+  let cap=6,pub=false;
   wire("sN",v=>n=+v);wire("sD",v=>diff=v);wire("sC",v=>cap=+v);
+  wire("sP",v=>{ pub=(+v===1);
+    $("pubNote").textContent = pub
+      ? "غرفة عامة — تبين في قائمة الغرف المفتوحة لأي أحد."
+      : "غرفة خاصة — ما تبين لأحد."; });
   wire("sM",v=>{
     mode=v;
     const on=v==="online";
@@ -1623,7 +1677,12 @@ function setup(){
   $("mk").addEventListener("click",e=>{
     const nm=grabName(); if(!nm)return;
     e.target.disabled=true; e.target.textContent="لحظة…";
-    setTimeout(()=>hostRoom(nm,cap),20);
+    setTimeout(()=>hostRoom(nm,cap,pub),20);
+  });
+  $("brw").addEventListener("click",e=>{
+    const nm=grabName(); if(!nm)return;
+    e.target.disabled=true; e.target.textContent="لحظة…";
+    setTimeout(()=>browseRooms(nm),20);
   });
   $("jn").addEventListener("click",e=>{
     const nm=grabName(); if(!nm)return;
@@ -1708,6 +1767,9 @@ function trConnect(code,role,onMsg,onReady,onFail,idx){
     onMsg(topic,d);
   });
 }
+function trConnectAt(idx,code,role,onMsg,onReady,onFail){
+  trConnect(code,role,onMsg,onReady,onFail,idx||0);
+}
 function trPub(topic,obj,retain){
   if(!TR)return;
   try{ TR.cli.publish(topic,JSON.stringify(Object.assign({from:CID},obj)),{qos:0,retain:!!retain}); }catch(e){}
@@ -1719,6 +1781,86 @@ function trAnnounceHost(on,name){
   if(!TR)return;
   if(on) TR.cli.publish(TR.t.host,JSON.stringify({from:CID,name}),{qos:0,retain:true});
   else   TR.cli.publish(TR.t.host,"",{qos:0,retain:true});
+}
+
+/* ---------- دليل الغرف المفتوحة ----------
+   المضيف اللي يخلي غرفته عامة ينشر بطاقة صغيرة على موضوع ثابت،
+   والوسيط يحتفظ فيها ويعطيها لأي واحد يشترك. ما فيه سيرفر ولا قاعدة بيانات:
+   البطاقة تتجدّد كل 20 ثانية، وتنمسح لما تبدأ اللعبة أو يطلع المضيف. */
+const LOBTOP="dagesh26/lobby/";
+let LOBBEAT=null;
+function lobbyPublish(on){
+  if(!TR||!NET||!NET.isHost)return;
+  const t=LOBTOP+NET.code;
+  if(on&&NET.pub&&!(S&&S.phase)){
+    const ps=players_().length, bots=Math.min(NET.bots||0,13-ps);
+    TR.cli.publish(t,JSON.stringify({code:NET.code,host:NET.me,n:ps,bots,
+      cap:NET.cap,ts:Date.now()}),{qos:0,retain:true});
+  }else{
+    TR.cli.publish(t,"",{qos:0,retain:true});      // شيلها من القائمة
+  }
+}
+function lobbyBeat(on){
+  clearInterval(LOBBEAT); LOBBEAT=null;
+  lobbyPublish(on);
+  if(on)LOBBEAT=setInterval(()=>lobbyPublish(true),20000);
+}
+
+/* ---------- تصفّح الغرف ---------- */
+let BRW=null, BRWNAME="", BRWIDX=0;
+function browseClose(){ try{BRW&&BRW.end(true)}catch(e){} BRW=null; }
+function browseJoin(code){ const nm=BRWNAME; browseClose(); ovHide(); joinRoom(nm,code,0,BRWIDX); }
+function browseRooms(name){
+  browseClose();
+  BRWNAME=name||BRWNAME;
+  ovShow(`<div class="hero sm"><h2>غرف مفتوحة</h2>
+    <p>غرف ناس ناقصهم لاعبين — ادخل على أي وحدة والعب معهم.</p></div>
+   <div class="conn" id="netConn">ندوّر على غرف…</div>
+   <div id="brwList"></div>
+   <div class="ctl" style="margin-top:14px">
+     <button class="act b-quiet" onclick="browseRooms()">حدّث</button>
+     <button class="act b-quiet" onclick="browseClose();ovHide();setup()">رجوع</button></div>`);
+  if(typeof mqtt==="undefined"){ netStatus("مكتبة الاتصال ما تحمّلت",true); return; }
+  const rooms=new Map(); let idx=0;
+  const draw=cli=>{
+    const now=Date.now(), live=[];
+    rooms.forEach((d,code)=>{
+      const age=now-(d.ts||0);
+      if(age<75000) live.push(d);
+      else if(age>600000){ try{cli.publish(LOBTOP+code,"",{qos:0,retain:true})}catch(e){} } // ننضّف الميّت
+    });
+    live.sort((a,b)=>(b.n+b.bots)-(a.n+a.bots));
+    const box=$("brwList"); if(!box)return;
+    netStatus(live.length?`${live.length} غرفة مفتوحة`:"ما فيه غرف مفتوحة حالياً");
+    box.innerHTML = live.length ? `<div class="lobby-list">`+live.map(d=>{
+        const full=d.n>=d.cap;
+        return `<div class="brw-row">
+          <div class="brw-i"><b>${esc(d.host||"لاعب")}</b>
+            <span>رمز ${d.code} · ${d.n} من ${d.cap}${d.bots?` · ${d.bots} بوت`:""}</span></div>
+          <button class="act b-brass sm" ${full?"disabled":""}
+            onclick="browseJoin('${d.code}')">${full?"ممتلئة":"ادخل"}</button></div>`;
+      }).join("")+`</div>`
+      : `<div class="warn" style="margin-top:14px">ما فيه أحد فاتح غرفة عامة الحين.
+         ارجع وسوِّ غرفة وخلّها <b>عامة</b> — بتبين لأي واحد يفتح الصفحة، وانتظرهم يدخلون.</div>`;
+  };
+  const start=()=>{
+    if(idx>=BROKERS.length){ netStatus("ما قدرنا نتصل بأي وسيط",true); return; }
+    let cli;
+    try{ cli=mqtt.connect(BROKERS[idx],{clientId:"dgb_"+Math.random().toString(16).slice(2,10),
+      keepalive:20,reconnectPeriod:0,connectTimeout:8000,clean:true}); }
+    catch(e){ idx++; return start(); }
+    BRW=cli; let ok=false;
+    const to=setTimeout(()=>{ if(!ok){ try{cli.end(true)}catch(e){} idx++; start(); } },8500);
+    cli.on("connect",()=>{ ok=true; clearTimeout(to); BRWIDX=idx;
+      cli.subscribe(LOBTOP+"+",{qos:0},()=>setTimeout(()=>draw(cli),2200)); });
+    cli.on("error",()=>{ if(!ok){ clearTimeout(to); try{cli.end(true)}catch(e){} idx++; start(); } });
+    cli.on("message",(t,buf)=>{
+      const code=t.slice(LOBTOP.length), raw=buf.toString();
+      if(!raw){ rooms.delete(code); return; }
+      try{ const d=JSON.parse(raw); if(d&&d.code)rooms.set(d.code,d); }catch(e){}
+    });
+  };
+  start();
 }
 
 let WAKE=null;
@@ -1757,7 +1899,8 @@ function rosterMsg(){
     specs:specs_().map(r=>({cid:r.cid,name:r.name,online:r.online})),
     cap:NET.cap, started:!!(S&&S.phase)};
 }
-function pushRoster(){ if(!isHost())return; broadcast(rosterMsg()); if(!S||!S.phase)lobbyHost(); }
+function pushRoster(){ if(!isHost())return; broadcast(rosterMsg());
+  if(!S||!S.phase){ lobbyPublish(true); lobbyHost(); } }
 
 function stateFor(seat){
   const spec=seat==null||seat<0;
@@ -1856,7 +1999,7 @@ function kick(cid){
 }
 
 /* ---------- المضيف ---------- */
-function hostRoom(name,cap,tries){
+function hostRoom(name,cap,pub,tries){
   tries=tries||0;
   if(typeof mqtt==="undefined"){
     return ovShow(`<div class="hero sm"><h2>ما قدرنا نجهّز الاتصال</h2>
@@ -1869,14 +2012,14 @@ function hostRoom(name,cap,tries){
     <div class="conn" id="netConn">نتصل بالوسيط…</div>
     <div class="ctl" style="margin-top:14px"><button class="act b-quiet" onclick="leaveRoom()">إلغاء</button></div>`);
   NET={isHost:true,code,me:name,seat:0,role:"player",cap,chat:[],bots:0,botDiff:"mid",
-       roster:[{cid:CID,name,seat:0,role:"player",online:true}]};
+       pub:!!pub,roster:[{cid:CID,name,seat:0,role:"player",online:true}]};
   trConnect(code,"host",hostOnMsg,()=>{
-    trAnnounceHost(true,name); keepAwake(true); lobbyHost();
+    trAnnounceHost(true,name); keepAwake(true); lobbyBeat(!!pub); lobbyHost();
   },why=>{
     NET=null;
     ovShow(`<div class="hero sm"><h2>الاتصال ما ضبط</h2>
       <p>${why==="no-lib"?"مكتبة الاتصال ما تحمّلت.":"كل وسطاء الاتصال ما ردّوا. جرّب من شبكة ثانية أو أطفئ الـVPN."}</p></div>
-      <div class="ctl"><button class="act b-brass" onclick="ovHide();hostRoom('${esc(name)}',${cap})">حاول مرة ثانية</button>
+      <div class="ctl"><button class="act b-brass" onclick="ovHide();hostRoom('${esc(name)}',${cap},${pub?1:0})">حاول مرة ثانية</button>
       <button class="act b-quiet" onclick="ovHide();setup()">رجوع</button></div>`);
   });
 }
@@ -1935,13 +2078,14 @@ function autoIfOffline(){
 function say2(t){ if(S&&S.phase){say(t);} }
 
 /* ---------- الضيف ---------- */
-function joinRoom(name,code,tries){
+function joinRoom(name,code,tries,bidx){
   tries=tries||0;
   ovShow(`<div class="hero sm"><h2>جاري الدخول…</h2><p>نتصل بغرفة <b>${code}</b>.</p></div>
     <div class="conn" id="netConn">نتصل بالوسيط…</div>
     <div class="ctl" style="margin-top:14px"><button class="act b-quiet" onclick="leaveRoom()">إلغاء ورجوع</button></div>`);
   NET={isHost:false,code,me:name,seat:null,role:null,chat:[]};
-  trConnect(code,"guest",guestOnMsg,()=>{
+  NET._bidx=bidx||0;
+  trConnectAt(bidx||0,code,"guest",guestOnMsg,()=>{
     netStatus("نبحث عن الغرفة…");
     trToHost({t:"hello",name});
     let n=0;
@@ -2043,6 +2187,7 @@ function rosterRows(list,specs,canKick){
       ${canKick&&r.cid!==CID?`<button class="kick" onclick="kick('${r.cid}')">×</button>`:""}</div>`).join(""):"";
   return rows+sp;
 }
+function setPublic(v){ if(!NET||!NET.isHost)return; NET.pub=!!v; lobbyBeat(NET.pub); lobbyHost(); }
 function setBots(n){ if(!NET)return; NET.bots=Math.max(0,Math.min(13-players_().length,n)); lobbyHost(); }
 function setBotDiff(d){ if(!NET)return; NET.botDiff=d; lobbyHost(); }
 
@@ -2071,6 +2216,14 @@ function lobbyHost(){
         : `تحتاجون <b>4</b> على الطاولة — ناقصكم ${4-total}. زيدوا بوتات أو انتظروا أصحابكم.`}</p>
    </div>
 
+   <div class="pubrow">
+     <div><b>${NET.pub?"غرفة عامة":"غرفة خاصة"}</b>
+       <span>${NET.pub?"تبين في قائمة الغرف المفتوحة، وأي أحد يقدر يدخل."
+                     :"ما تبين لأحد — بس اللي عنده الرمز يدخل."}</span></div>
+     <button class="act b-quiet sm" onclick="setPublic(${NET.pub?0:1})">
+       ${NET.pub?"خلّها خاصة":"خلّها عامة"}</button>
+   </div>
+
    <div class="ctl"><button class="act b-brass" ${total<4?"disabled":""} onclick="startOnline()">
        ابدأ اللعب${total>=4?` (${total})`:""}</button>
    <button class="act b-quiet" onclick="copyLink(this,'${link}')">انسخ الرابط</button></div>
@@ -2095,6 +2248,7 @@ function startOnline(){
   const names=ps.map(r=>r.name).concat(botNames);
   NET.seat=ps.findIndex(r=>r.cid===CID);
   NET.botSeats=names.length-bots;               // البوتات تجي بعد البشر
+  lobbyBeat(false);                             // بدأت — تطلع من قائمة الغرف المفتوحة
   ovHide();
   newSession(names.length,"online",NET.botDiff||"mid",names);
   S.players.forEach((p,k)=>p.bot = k>=NET.botSeats);   // البشر لا، البوتات نعم
@@ -2118,6 +2272,7 @@ function clearRoom(){ try{localStorage.removeItem("dagesh-room")}catch(e){} }
 /* المضيف يطلع بس الجلسة تكمل — يقدر يرجع بعدين لنفس مقعده */
 function hostStepOut(){
   saveRoom();
+  lobbyBeat(false);
   broadcast({t:"hostleft"});
   trAnnounceHost(false);
   keepAwake(false);
@@ -2132,8 +2287,9 @@ function hostStepOut(){
 }
 
 function leaveRoom(){
+  browseClose();
   if(NET){
-    if(isHost()){ broadcast({t:"closed"}); trAnnounceHost(false); }
+    if(isHost()){ lobbyBeat(false); broadcast({t:"closed"}); trAnnounceHost(false); }
     else trToHost({t:"bye"});
   }
   keepAwake(false);
@@ -2152,7 +2308,7 @@ function copyLink(btn,link){
 $("gateBtn").addEventListener("click",()=>{S.gate=false;render();});
 $("chatSend").addEventListener("click",chatSend);
 $("chatIn").addEventListener("keydown",e=>{if(e.key==="Enter")chatSend();});
-$("bMute").textContent=MUTED?"🔇":"🔊";
+volIcon();
 $("bMute").addEventListener("click",toggleMute);
 $("bRules").addEventListener("click",rules);
 $("bNew").addEventListener("click",()=>{
