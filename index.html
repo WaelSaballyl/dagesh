@@ -529,11 +529,11 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
 
 <div class="ov" id="ov" hidden><div class="sheet" id="sheet"></div></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.10.1/mqtt.min.js"></script>
 <script>
-/* لو انحجب cdnjs نجيب المكتبة من مصدر ثاني قبل ما يبدأ أي شي */
-if(typeof Peer==="undefined"){
-  document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');
+/* مصدر احتياطي لو انحجب الأول */
+if(typeof mqtt==="undefined"){
+  document.write('<script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"><\/script>');
 }
 </script>
 <script>
@@ -1510,16 +1510,68 @@ const CID=(()=>{ let v=null;
   return v; })();
 
 const mkCode=()=>String(10000+rnd(90000));     // كود رقمي من 5 خانات
-const peerIdFor=c=>"dagesh-2026-"+c;
-/* بدون TURN، الاتصال بين جهازين على شبكة جوال يفشل غالباً. */
-const ICE={iceServers:[
-  {urls:"stun:stun.l.google.com:19302"},
-  {urls:"stun:stun1.l.google.com:19302"},
-  {urls:"turn:openrelay.metered.ca:80",username:"openrelayproject",credential:"openrelayproject"},
-  {urls:"turn:openrelay.metered.ca:443",username:"openrelayproject",credential:"openrelayproject"},
-  {urls:"turn:openrelay.metered.ca:443?transport=tcp",username:"openrelayproject",credential:"openrelayproject"}
-]};
-const PEEROPTS={debug:0,config:ICE,pingInterval:3000};
+
+/* ================= طبقة النقل =================
+   كل الرسائل تمر عبر وسيط MQTT عام. اخترناه بدل الاتصال المباشر
+   لأن الاتصال المباشر يفشل كثير على شبكات الجوال، والوسيط القديم
+   كان محجوب أصلاً. الوسيط ينقل رسائل فقط وما يفهم اللعبة. */
+const BROKERS=[
+  "wss://broker.emqx.io:8084/mqtt",
+  "wss://broker.hivemq.com:8884/mqtt",
+  "wss://test.mosquitto.org:8081/mqtt"
+];
+const TOP=c=>({hub:`dagesh26/${c}/hub`, all:`dagesh26/${c}/all`,
+               host:`dagesh26/${c}/host`, me:x=>`dagesh26/${c}/p/${x}`});
+
+let TR=null;                                   // {cli, code, t, role}
+function trClose(){ try{ TR&&TR.cli&&TR.cli.end(true) }catch(e){} TR=null; }
+
+/* يفتح الاتصال بالوسيط ويجرّب البدائل لو فشل */
+function trConnect(code,role,onMsg,onReady,onFail,idx){
+  idx=idx||0;
+  if(typeof mqtt==="undefined")return onFail("no-lib");
+  if(idx>=BROKERS.length)return onFail("no-broker");
+  const t=TOP(code);
+  const opts={clientId:"dg_"+CID+"_"+Math.random().toString(16).slice(2,8),
+              keepalive:25, reconnectPeriod:2500, connectTimeout:9000, clean:true};
+  if(role==="host"){                            // لو انقطع المضيف، الوسيط يمسح إعلانه تلقائياً
+    opts.will={topic:t.host, payload:"", qos:0, retain:true};
+  }
+  let cli;
+  try{ cli=mqtt.connect(BROKERS[idx],opts); }catch(e){ return trConnect(code,role,onMsg,onReady,onFail,idx+1); }
+  let settled=false;
+  const fail=why=>{ if(settled)return; settled=true;
+    try{cli.end(true)}catch(e){}
+    trConnect(code,role,onMsg,onReady,onFail,idx+1); };
+  const timer=setTimeout(()=>fail("timeout"),10000);
+  cli.on("connect",()=>{
+    if(settled)return; settled=true; clearTimeout(timer);
+    TR={cli,code,t,role};
+    const subs=role==="host"?[t.hub,t.host]:[t.all,t.me(CID),t.host];
+    cli.subscribe(subs,{qos:0},()=>onReady(t));
+  });
+  cli.on("error",()=>fail("error"));
+  cli.on("close",()=>{ if(!settled)fail("close"); });
+  cli.on("message",(topic,buf)=>{
+    let d=null; const raw=buf.toString();
+    if(topic===t.host){ onMsg("__host__",raw?JSON.parse(raw):null); return; }
+    try{ d=JSON.parse(raw) }catch(e){ return; }
+    if(!d||d.from===CID)return;                 // ما نستقبل رسائلنا
+    onMsg(topic,d);
+  });
+}
+function trPub(topic,obj,retain){
+  if(!TR)return;
+  try{ TR.cli.publish(topic,JSON.stringify(Object.assign({from:CID},obj)),{qos:0,retain:!!retain}); }catch(e){}
+}
+function trBroadcast(obj){ TR&&trPub(TR.t.all,obj); }
+function trToHost(obj){    TR&&trPub(TR.t.hub,obj); }
+function trToPeer(cid,obj){TR&&trPub(TR.t.me(cid),obj); }
+function trAnnounceHost(on,name){
+  if(!TR)return;
+  if(on) TR.cli.publish(TR.t.host,JSON.stringify({from:CID,name}),{qos:0,retain:true});
+  else   TR.cli.publish(TR.t.host,"",{qos:0,retain:true});
+}
 
 let WAKE=null;
 async function keepAwake(on){
@@ -1530,22 +1582,7 @@ async function keepAwake(on){
   }catch(e){}
 }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&isHost())keepAwake(true); });
-function keepAlive(peer){
-  peer.on("disconnected",()=>{
-    if(peer.destroyed)return;
-    netStatus("نرتّب الاتصال…");
-    let n=0;
-    const back=()=>{
-      if(peer.destroyed||!peer.disconnected)return;
-      try{peer.reconnect()}catch(e){}
-      if(++n<8)setTimeout(back,Math.min(800*n,5000));
-    };
-    setTimeout(back,600);
-  });
-  document.addEventListener("visibilitychange",()=>{
-    if(!document.hidden&&peer.disconnected&&!peer.destroyed){try{peer.reconnect()}catch(e){}}
-  });
-}
+
 const isOnline=()=>!!NET;
 const isHost=()=>!!(NET&&NET.isHost);
 const isSpec=()=>!!(NET&&NET.role==="spec")||!!(S&&S.spectator);
@@ -1560,8 +1597,8 @@ function freeSeat(){
   for(let k=0;k<NET.cap;k++) if(!used.has(k)) return k;
   return -1;
 }
-function sendTo(r,msg){ if(r.conn&&r.conn.open){try{r.conn.send(msg)}catch(e){}} }
-function broadcast(msg){ for(const r of NET.roster) if(r.cid!==CID) sendTo(r,msg); }
+function sendTo(r,msg){ if(r&&r.cid&&r.cid!==CID) trToPeer(r.cid,msg); }
+function broadcast(msg){ trBroadcast(msg); }
 
 function rosterMsg(){
   const bots=(S&&S.phase&&NET.botSeats!=null)
@@ -1574,7 +1611,6 @@ function rosterMsg(){
 }
 function pushRoster(){ if(!isHost())return; broadcast(rosterMsg()); if(!S||!S.phase)lobbyHost(); }
 
-/* ---------- الحالة المرسلة ---------- */
 function stateFor(seat){
   const spec=seat==null||seat<0;
   return {n:S.n,phase:S.phase,pot:S.pot,boss:S.boss,turn:S.turn,order:S.order,
@@ -1588,8 +1624,8 @@ function stateFor(seat){
 function pushState(){
   if(!isHost()||!S)return;
   for(const r of NET.roster){
-    if(r.cid===CID)continue;
-    sendTo(r,{t:"state",s:stateFor(r.role==="player"?r.seat:-1)});
+    if(r.cid===CID||String(r.cid).startsWith("bot"))continue;
+    trToPeer(r.cid,{t:"state",s:stateFor(r.role==="player"?r.seat:-1)});
   }
 }
 function applyState(st){
@@ -1601,13 +1637,11 @@ function applyState(st){
   render();
 }
 
-/* ---------- توجيه الأفعال ---------- */
 function act(type,payload){
   if(!isOnline())return applyAct(S.viewer,type,payload);
   if(isSpec())return;
   if(isHost())return applyAct(NET.seat,type,payload);
-  const c=NET.hostConn;
-  if(c&&c.open)c.send({t:"act",seat:NET.seat,type,payload:payload||{}});
+  trToHost({t:"act",type,payload:payload||{}});
 }
 function applyAct(seat,type,pl){
   pl=pl||{};const p=S.players[seat];if(!p)return;
@@ -1649,115 +1683,85 @@ function chatSend(){
   const el=$("chatIn"); if(!el)return;
   const t=(el.value||"").trim(); if(!t)return;
   el.value="";
-  if(isHost())chatPush(NET.me,t);
-  else if(NET.hostConn&&NET.hostConn.open)NET.hostConn.send({t:"chat",text:t});
+  if(isHost())chatPush(NET.me,t); else trToHost({t:"chat",text:t});
 }
 function renderChat(){
   const box=$("chatBox"); if(!box||!NET)return;
-  box.innerHTML=(NET.chat||[]).map(m=>
-    `<p><b>${esc(m.name)}</b> ${esc(m.text)}</p>`).join("");
+  box.innerHTML=(NET.chat||[]).map(m=>`<p><b>${esc(m.name)}</b> ${esc(m.text)}</p>`).join("");
 }
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-/* ---------- طرد لاعب ---------- */
 function kick(cid){
   if(!isHost()||cid===CID)return;
   const r=findCid(cid); if(!r)return;
-  sendTo(r,{t:"kicked"});
+  trToPeer(cid,{t:"kicked"});
   NET.roster=NET.roster.filter(x=>x.cid!==cid);
   if(S&&S.phase&&r.role==="player"&&S.players[r.seat]){
     S.players[r.seat].out=true; S.players[r.seat].folded=true;
     say(`${r.name} انطرد من الجلسة`);
   }
-  setTimeout(()=>{try{r.conn&&r.conn.close()}catch(e){}},300);
   pushRoster(); pushState(); if(S)render();
 }
 
 /* ---------- المضيف ---------- */
 function hostRoom(name,cap,tries){
   tries=tries||0;
-  if(typeof Peer==="undefined"){                      // المكتبة ما وصلت
+  if(typeof mqtt==="undefined"){
     return ovShow(`<div class="hero sm"><h2>ما قدرنا نجهّز الاتصال</h2>
       <p>مكتبة الاتصال ما تحمّلت — يمكن النت أو حاجب إعلانات. جرّب تعيد تحميل الصفحة.</p></div>
       <div class="ctl"><button class="act b-brass" onclick="location.reload()">أعد التحميل</button>
       <button class="act b-quiet" onclick="ovHide();setup()">رجوع</button></div>`);
   }
-  /* نوريه على طول إنه شغّال — قبل كان الزر يبان ميّت لين يرد الوسيط */
-  ovShow(`<div class="hero sm"><h2>جاري إنشاء الغرفة…</h2>
-    <p>نجهّز لك رمز الغرفة. ثانية وحدة.</p></div>
-    <div class="conn" id="netConn">نتصل بالوسيط…</div>
-    <div class="ctl" style="margin-top:14px">
-      <button class="act b-quiet" onclick="leaveRoom()">إلغاء</button></div>`);
   const code=mkCode();
-  const peer=new Peer(peerIdFor(code),PEEROPTS);
-  const giveUp=setTimeout(()=>{                       // ما رد خلال 12 ثانية
-    if(NET&&NET.peer===peer&&!peer.open){
-      try{peer.destroy()}catch(e){}
-      if(tries<2){ netStatus("نحاول مرة ثانية…"); return hostRoom(name,cap,tries+1); }
-      ovShow(`<div class="hero sm"><h2>الاتصال ما ضبط</h2>
-        <p>وسيط الاتصال ما رد. جرّب مرة ثانية، ولو تكررت جرّب من شبكة ثانية أو أطفئ الـVPN.</p></div>
-        <div class="ctl"><button class="act b-brass" onclick="ovHide();hostRoom('${esc(name)}',${cap})">حاول مرة ثانية</button>
-        <button class="act b-quiet" onclick="leaveRoom()">رجوع</button></div>`);
-    }
-  },12000);
-  peer.on("open",()=>clearTimeout(giveUp));
-  NET={peer,isHost:true,code,me:name,seat:0,role:"player",cap,chat:[],
-       bots:0,botDiff:"mid",
-       roster:[{cid:CID,name,seat:0,role:"player",conn:null,online:true}]};
-  keepAlive(peer);
-  peer.on("open",()=>{keepAwake(true);lobbyHost();});
-  peer.on("error",e=>{
-    if(e.type==="unavailable-id"){                    // الرمز محجوز — نجرّب رمز غيره
-      clearTimeout(giveUp);
-      try{peer.destroy()}catch(x){} NET=null;
-      if(tries<5)return hostRoom(name,cap,tries+1);
-    }
-    if(e.type==="network"||e.type==="server-error"||e.type==="socket-error"){
-      netStatus("الشبكة تعبانة — نحاول…",true); return;
-    }
-    netStatus("مشكلة اتصال: "+e.type,true);
+  ovShow(`<div class="hero sm"><h2>جاري إنشاء الغرفة…</h2><p>نجهّز لك رمز الغرفة.</p></div>
+    <div class="conn" id="netConn">نتصل بالوسيط…</div>
+    <div class="ctl" style="margin-top:14px"><button class="act b-quiet" onclick="leaveRoom()">إلغاء</button></div>`);
+  NET={isHost:true,code,me:name,seat:0,role:"player",cap,chat:[],bots:0,botDiff:"mid",
+       roster:[{cid:CID,name,seat:0,role:"player",online:true}]};
+  trConnect(code,"host",hostOnMsg,()=>{
+    trAnnounceHost(true,name); keepAwake(true); lobbyHost();
+  },why=>{
+    NET=null;
+    ovShow(`<div class="hero sm"><h2>الاتصال ما ضبط</h2>
+      <p>${why==="no-lib"?"مكتبة الاتصال ما تحمّلت.":"كل وسطاء الاتصال ما ردّوا. جرّب من شبكة ثانية أو أطفئ الـVPN."}</p></div>
+      <div class="ctl"><button class="act b-brass" onclick="ovHide();hostRoom('${esc(name)}',${cap})">حاول مرة ثانية</button>
+      <button class="act b-quiet" onclick="ovHide();setup()">رجوع</button></div>`);
   });
-  wireHostConnections(peer);
 }
-function wireHostConnections(peer){
-  peer.on("connection",c=>{
-    c.on("open",()=>{
-      const meta=c.metadata||{};
-      const cid=meta.cid||("x"+Math.random());
-      const nm=(meta.name||"لاعب").slice(0,12);
-      let r=findCid(cid);
-      if(r){                                   // رجع بعد ما طلع — نفس المقعد
-        r.conn=c; r.online=true; r.name=nm;
-      }else{
-        const started=!!(S&&S.phase);
-        const seat=started?-1:freeSeat();
-        const role=(started||seat<0)?"spec":"player";
-        r={cid,name:nm,seat,role,conn:c,online:true};
-        NET.roster.push(r);
-      }
-      c.cid=cid; c.send({t:"welcome",cid,seat:r.seat,role:r.role,code:NET.code});
-      c.send({t:"chat",list:NET.chat||[]});
-      if(S&&S.phase){ sendTo(r,{t:"state",s:stateFor(r.role==="player"?r.seat:-1)}); }
-      say2(`${nm} ${r.role==="spec"?"دخل متفرّج":"دخل الغرفة"}`);
-      pushRoster();
-    });
-    c.on("data",d=>{
-      if(!d)return;
-      if(d.t==="act"){ const r=findCid(c.cid); if(r&&r.role==="player")applyAct(r.seat,d.type,d.payload); }
-      else if(d.t==="chat"){ const r=findCid(c.cid); chatPush(r?r.name:"لاعب",d.text); }
-    });
-    c.on("close",()=>{
-      const r=findCid(c.cid); if(!r)return;
-      r.online=false; r.conn=null;
-      say2(`${r.name} انقطع اتصاله`);
-      pushRoster(); if(S&&S.phase)render();
-    });
-  });
+function hostOnMsg(topic,d){
+  if(!NET||!NET.isHost||!d)return;
+  if(topic==="__host__")return;
+  const cid=d.from;
+  if(d.t==="hello"){
+    const nm=(d.name||"لاعب").slice(0,12);
+    let r=findCid(cid);
+    if(r){ r.online=true; r.name=nm; }
+    else{
+      const started=!!(S&&S.phase);
+      const seat=started?-1:freeSeat();
+      const role=(started||seat<0)?"spec":"player";
+      r={cid,name:nm,seat,role,online:true};
+      NET.roster.push(r);
+      say2(`${nm} ${role==="spec"?"دخل متفرّج":"دخل الغرفة"}`);
+    }
+    trToPeer(cid,{t:"welcome",seat:r.seat,role:r.role,code:NET.code});
+    trToPeer(cid,{t:"chat",list:NET.chat||[]});
+    if(S&&S.phase)trToPeer(cid,{t:"state",s:stateFor(r.role==="player"?r.seat:-1)});
+    pushRoster();
+  }
+  else if(d.t==="bye"){
+    const r=findCid(cid); if(!r)return;
+    r.online=false; say2(`${r.name} طلع`); pushRoster(); if(S&&S.phase)render();
+  }
+  else if(d.t==="act"){ const r=findCid(cid); if(r&&r.role==="player")applyAct(r.seat,d.type,d.payload); }
+  else if(d.t==="chat"){ const r=findCid(cid); chatPush(r?r.name:"لاعب",d.text); }
+  else if(d.t==="ping"){ const r=findCid(cid); if(r)r.online=true; }
 }
 /* لو صاحب الدور منقطع، نتصرّف عنه بعد مهلة عشان الجولة ما تتعلّق */
 function autoIfOffline(){
   if(!isHost()||!S||!S.phase||S.phase==="done"||S.phase==="over")return;
   const t=whoseTurn(); if(t<0)return;
+  if(S.players[t]&&S.players[t].bot){ clearTimeout(S._autoT); S._autoT=null; return; }
   const r=NET.roster.find(x=>x.role==="player"&&x.seat===t);
   if(!r||r.online){ clearTimeout(S._autoT); S._autoT=null; return; }
   if(S._autoFor===t&&S._autoT)return;
@@ -1769,7 +1773,7 @@ function autoIfOffline(){
     const nm=S.players[t]?S.players[t].name:"لاعب";
     if(S.phase==="betting"){ say(`${nm} منقطع — انسحب تلقائياً`); applyAct(t,"fold"); }
     else if(S.phase==="offer"){ say(`${nm} منقطع — وافق تلقائياً`); applyAct(t,"resp",{r:"ok"}); }
-    else if(S.phase==="mic"){                       // المايك منقطع: تقسيم بالتساوي
+    else if(S.phase==="mic"){
       const l=bettors(), q=Math.floor(split()/l.length/STEP)*STEP, sh={}; let u=0;
       l.forEach(x=>{ if(x.i!==t){sh[x.i]=q;u+=q;} }); sh[t]=split()-u;
       say(`${nm} منقطع — قسّمنا بالتساوي عنه`); applyAct(t,"offer",{shares:sh});
@@ -1781,112 +1785,94 @@ function say2(t){ if(S&&S.phase){say(t);} }
 /* ---------- الضيف ---------- */
 function joinRoom(name,code,tries){
   tries=tries||0;
-  const peer=new Peer(PEEROPTS);
-  NET={peer,isHost:false,code,me:name,seat:null,role:null,chat:[]};
-  keepAlive(peer);
   ovShow(`<div class="hero sm"><h2>جاري الدخول…</h2><p>نتصل بغرفة <b>${code}</b>.</p></div>
-    <div class="conn" id="netConn">…</div>
+    <div class="conn" id="netConn">نتصل بالوسيط…</div>
     <div class="ctl" style="margin-top:14px"><button class="act b-quiet" onclick="leaveRoom()">إلغاء ورجوع</button></div>`);
-  const retry=why=>{
-    if(tries>=5){netStatus(why+" — تأكد إن المضيف فاتح الصفحة وشاشته صاحية، وجرّب تدخل مرة ثانية",true);return;}
-    netStatus("نحاول الاتصال… "+(tries+1)+"/5");
-    try{peer.destroy()}catch(e){}
-    setTimeout(()=>joinRoom(name,code,tries+1),1500+tries*700);
-  };
-  NET._retry=retry;
-  peer.on("open",()=>{
-    const c=peer.connect(peerIdFor(code),{metadata:{cid:CID,name},reliable:true});
-    NET.hostConn=c;
-    c.on("open",()=>netStatus("متصل — ننتظر المضيف"));
-    c.on("data",d=>{
-      if(!d)return;
-      if(d.t==="welcome"){ NET.seat=d.seat; NET.role=d.role; lobbyGuest(); }
-      else if(d.t==="roster"){ NET.lobby=d; if(!S||!S.phase)lobbyGuest(); if(S)render(); }
-      else if(d.t==="chat"){ NET.chat=d.list||[]; renderChat(); }
-      else if(d.t==="kicked"){ ovShow(`<div class="hero sm"><h2>انطردت من الغرفة</h2>
-          <p>المضيف طلّعك من الجلسة.</p></div>
-          <button class="act b-brass wide" onclick="leaveRoom()">رجوع</button>`); }
-      else if(d.t==="full")ovShow(`<div class="hero sm"><h2>ما قدرنا ندخلك</h2><p>${esc(d.why||"الغرفة مقفلة")}.</p></div>
-        <button class="act b-brass wide" onclick="leaveRoom()">رجوع</button>`);
-      else if(d.t==="state"){ ovHide(); applyState(d.s); NET.lastState=d.s; saveRoom(); }
-      else if(d.t==="hostleft"){ NET.migrating=false; hostGone(); }
-      else if(d.t==="closed"){ NET.closed=true; clearRoom(); ovShow(`<div class="hero sm"><h2>المضيف أنهى الجلسة</h2>
-          <p>الغرفة انتهت بإرادة المضيف.</p></div>
-          <button class="act b-brass wide" onclick="leaveRoom()">رجوع للبداية</button>`); }
-      else if(d.t==="reveal")revealSheet(d.shown,d.winners,d.over);
-    });
-    c.on("close",()=>{ if(!NET||NET.closed)return; hostGone(); });
-    c.on("error",()=>{ if(NET.seat===null)retry("ما وصلنا للمضيف"); });
-    setTimeout(()=>{ if(NET.seat===null&&NET._retry)NET._retry("المضيف ما ردّ"); },9000);
-  });
-  peer.on("error",e=>{
-    if(e.type==="peer-unavailable"){
-      if(NET&&NET.migrating){setTimeout(()=>joinRoom(NET.me,NET.code),1600);return;}
-      netStatus("ما فيه غرفة بهذا الكود — تأكد إن المضيف فاتح الصفحة",true);return;}
-    if(e.type==="network"||e.type==="server-error"||e.type==="socket-error"){retry("الشبكة تعبانة");return;}
-    netStatus("مشكلة اتصال: "+e.type,true);
+  NET={isHost:false,code,me:name,seat:null,role:null,chat:[]};
+  trConnect(code,"guest",guestOnMsg,()=>{
+    netStatus("نبحث عن الغرفة…");
+    trToHost({t:"hello",name});
+    let n=0;
+    const poke=setInterval(()=>{
+      if(!NET||NET.seat!==null||!NET.isHost===false){}
+      if(!NET||NET.seat!==null){clearInterval(poke);return;}
+      if(++n>6){ clearInterval(poke);
+        netStatus("ما فيه غرفة بهذا الرمز، أو المضيف مقفل الصفحة",true); return; }
+      trToHost({t:"hello",name});
+    },2500);
+    NET._poke=poke;
+  },why=>{
+    NET=null;
+    ovShow(`<div class="hero sm"><h2>الاتصال ما ضبط</h2>
+      <p>${why==="no-lib"?"مكتبة الاتصال ما تحمّلت.":"كل وسطاء الاتصال ما ردّوا. جرّب من شبكة ثانية أو أطفئ الـVPN."}</p></div>
+      <div class="ctl"><button class="act b-brass" onclick="ovHide();joinRoom('${esc(name)}','${code}')">حاول مرة ثانية</button>
+      <button class="act b-quiet" onclick="ovHide();setup()">رجوع</button></div>`);
   });
 }
+function guestOnMsg(topic,d){
+  if(!NET)return;
+  if(topic==="__host__"){                       // إعلان المضيف اختفى = طلع
+    if(!d && NET.seat!==null && !NET.closed) hostGone();
+    return;
+  }
+  if(!d)return;
+  if(d.t==="welcome"){ clearInterval(NET._poke); NET.seat=d.seat; NET.role=d.role; lobbyGuest(); }
+  else if(d.t==="roster"){ NET.lobby=d; if(!S||!S.phase)lobbyGuest(); if(S)render(); }
+  else if(d.t==="chat"){ NET.chat=d.list||[]; renderChat(); }
+  else if(d.t==="state"){ ovHide(); applyState(d.s); NET.lastState=d.s; saveRoom(); }
+  else if(d.t==="kicked"){ NET.closed=true; ovShow(`<div class="hero sm"><h2>انطردت من الغرفة</h2>
+      <p>المضيف طلّعك من الجلسة.</p></div>
+      <button class="act b-brass wide" onclick="leaveRoom()">رجوع</button>`); }
+  else if(d.t==="hostleft"){ hostGone(); }
+  else if(d.t==="closed"){ NET.closed=true; clearRoom();
+      ovShow(`<div class="hero sm"><h2>المضيف أنهى الجلسة</h2><p>الغرفة انتهت بإرادة المضيف.</p></div>
+      <button class="act b-brass wide" onclick="leaveRoom()">رجوع للبداية</button>`); }
+}
 
-/* ---------- المضيف طلع: نكمّل بدونه ----------
-   نختار خليفة (أقل مقعد باقٍ) يستلم نفس رمز الغرفة، والباقي يرجعون له.
-   الأرصدة محفوظة عند الجميع، فالجولة الحالية تُلغى ونبدأ جولة جديدة. */
+/* ---------- المضيف طلع: واحد منهم يستلم ---------- */
 function knownPlayers(){
   const d=NET&&NET.lobby;
-  if(d&&d.players&&d.players.length)return d.players.slice().sort((a,b)=>a.seat-b.seat);
+  if(d&&d.players&&d.players.length)return d.players.filter(x=>!x.bot).slice().sort((a,b)=>a.seat-b.seat);
   if(NET&&NET.lastState)return NET.lastState.players.map((p,k)=>({cid:null,name:p.name,seat:k,online:true}));
   return [];
 }
 function hostGone(){
-  if(!NET||NET.migrating)return;
+  if(!NET||NET.migrating||NET.closed)return;
   NET.migrating=true;
-  const list=knownPlayers().filter(r=>r.seat!==0);         // مقعد 0 هو المضيف القديم
+  const list=knownPlayers().filter(r=>r.seat!==0);
   const rank=Math.max(0,list.findIndex(r=>r.cid===CID));
-  const wait=1200+rank*2600;                               // كل واحد ينتظر دوره عشان ما نتزاحم
   ovShow(`<div class="hero sm"><h2>المضيف طلع</h2>
     <p>نحاول نكمّل الجلسة بدونه. أرصدتكم محفوظة، والجولة الحالية تُلغى ونبدأ جولة جديدة.</p></div>
-    <div class="conn" id="netConn">ننتظر… ${rank===0?"انت اللي بتستلم":"لحظات"}</div>
+    <div class="conn" id="netConn">${rank===0?"انت اللي بتستلم…":"لحظات…"}</div>
     <div class="ctl" style="margin-top:14px"><button class="act b-quiet" onclick="leaveRoom()">اخرج</button></div>`);
-  setTimeout(()=>claimHost(0),wait);
+  setTimeout(()=>takeOver(),1000+rank*2500);
 }
-function claimHost(tries){
+function takeOver(){
   if(!NET||!NET.migrating)return;
-  if(tries>6){ netStatus("ما قدرنا نكمّل — ابدأوا غرفة جديدة",true); return; }
   const code=NET.code, myName=NET.me, snap=NET.lastState, known=knownPlayers();
-  const peer=new Peer(peerIdFor(code),PEEROPTS);
-  peer.on("open",()=>{                                     // نجحنا نمسك الرمز = صرنا المضيف
-    netStatus("استلمت الاستضافة");
-    try{ if(NET.peer&&!NET.peer.destroyed)NET.peer.destroy(); }catch(e){}
-    becomeHost(peer,code,myName,snap,known);
-  });
-  peer.on("error",e=>{
-    try{peer.destroy()}catch(x){}
-    if(e.type==="unavailable-id"){                          // أحد غيرنا استلم — نرجع ضيف
-      NET.migrating=false;
-      setTimeout(()=>joinRoom(myName,code),900);
-    }else setTimeout(()=>claimHost(tries+1),1400);
-  });
-}
-function becomeHost(peer,code,myName,snap,known){
-  const mySeat=Math.max(0,known.findIndex(r=>r.cid===CID));
-  NET={peer,isHost:true,code,me:myName,seat:mySeat,role:"player",cap:Math.max(4,known.length),
-       chat:[],migrating:false,
-       roster:known.map(r=>({cid:r.cid||("?"+r.seat),name:r.name,seat:r.seat,role:"player",
-                             conn:null,online:r.cid===CID}))};
-  const meRow=NET.roster.find(r=>r.cid===CID);
-  if(meRow){meRow.online=true;meRow.name=myName;}
-  keepAlive(peer); keepAwake(true);
-  wireHostConnections(peer);
-  /* نعيد بناء الجلسة بنفس الأسماء والأرصدة */
-  const names=known.map(r=>r.name);
-  newSession(names.length,"online","mid",names);
-  if(snap&&snap.players) S.players.forEach((p,k)=>{
-    const q=snap.players[k]; if(q){p.chips=q.chips;p.out=q.out;}
-  });
-  S.players.forEach(p=>p.bot=false);
-  S.viewer=mySeat;
-  say(`${myName} استلم الاستضافة — الجولة أُلغيت ونبدأ من جديد`,"hi");
-  startHand(); pushRoster(); pushState(); render();
+  trAnnounceHost(true,myName);                  // نعلن نفسنا مضيف
+  setTimeout(()=>{                               // نتأكد ما أحد سبقنا
+    if(!NET||!NET.migrating)return;
+    NET.migrating=false;
+    trClose();
+    const mySeat=Math.max(0,known.findIndex(r=>r.cid===CID));
+    NET={isHost:true,code,me:myName,seat:mySeat,role:"player",cap:Math.max(4,known.length),
+         chat:[],bots:0,botDiff:"mid",
+         roster:known.map(r=>({cid:r.cid||("?"+r.seat),name:r.name,seat:r.seat,role:"player",
+                               online:r.cid===CID}))};
+    trConnect(code,"host",hostOnMsg,()=>{
+      trAnnounceHost(true,myName); keepAwake(true);
+      const names=known.map(r=>r.name);
+      newSession(names.length,"online","mid",names);
+      if(snap&&snap.players)S.players.forEach((q,k)=>{
+        const o=snap.players[k]; if(o){q.chips=o.chips;q.out=o.out;}
+      });
+      S.players.forEach(q=>q.bot=false);
+      S.viewer=mySeat;
+      say(`${myName} استلم الاستضافة — الجولة أُلغيت ونبدأ من جديد`,"hi");
+      startHand(); pushRoster(); pushState(); render();
+    },()=>{ netStatus("ما قدرنا نكمّل — ابدأوا غرفة جديدة",true); });
+  },1200);
 }
 /* ---------- شاشات الغرفة ---------- */
 function rosterRows(list,specs,canKick){
@@ -1979,8 +1965,9 @@ function clearRoom(){ try{localStorage.removeItem("dagesh-room")}catch(e){} }
 function hostStepOut(){
   saveRoom();
   broadcast({t:"hostleft"});
+  trAnnounceHost(false);
   keepAwake(false);
-  try{ if(NET.peer&&!NET.peer.destroyed)NET.peer.destroy(); }catch(e){}
+  trClose();
   const room=lastRoom();
   NET=null; S=null; ovHide(); setup();
   setTimeout(()=>{ if(room)ovShow(`<div class="hero sm"><h2>طلعت من الغرفة</h2>
@@ -1991,9 +1978,12 @@ function hostStepOut(){
 }
 
 function leaveRoom(){
-  if(isHost()&&NET.roster) broadcast({t:"closed"});   // خروج مقصود = الغرفة تنتهي
+  if(NET){
+    if(isHost()){ broadcast({t:"closed"}); trAnnounceHost(false); }
+    else trToHost({t:"bye"});
+  }
   keepAwake(false);
-  try{ if(NET&&NET.peer&&!NET.peer.destroyed) NET.peer.destroy(); }catch(e){}
+  trClose();
   NET=null; S=null;
   try{history.replaceState(null,"",location.pathname)}catch(e){}
   ovHide(); setup();
