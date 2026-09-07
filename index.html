@@ -257,8 +257,10 @@ button.act[disabled]{opacity:.35;cursor:not-allowed}
   min-height:120px;overflow-y:auto;
   overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
   background:var(--paper-2);border-radius:var(--r);padding:4px 10px}
-.chatbox .empty{color:var(--ink-3);font-size:12px;text-align:center;margin:auto;
-  border:0;padding:0;line-height:1.7}
+.chatbox .empty{color:var(--ink-3);font-size:12.5px;text-align:center;margin:auto;
+  border:0;padding:0 8px;line-height:1.8}
+.chatbox .empty b{color:var(--ink-2)}
+.chatrow[hidden]{display:none}
 .chatbox p{margin:0;color:var(--ink-2);padding:6px 0;border-bottom:1px solid var(--rule);line-height:1.55;
   overflow-wrap:anywhere}
 .chatbox p:last-child{border-bottom:0}
@@ -594,7 +596,7 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
   <div class="cp-head"><b>الدردشة</b>
     <button class="cp-x" onclick="chatOpen(false)" aria-label="سكّر">×</button></div>
   <div class="chatbox" id="chatBox"></div>
-  <div class="chatrow">
+  <div class="chatrow" id="chatRow">
     <input id="chatIn" maxlength="160" placeholder="اكتب رسالة…" autocomplete="off">
     <button class="act b-brass" id="chatSend">إرسال</button>
   </div>
@@ -2008,9 +2010,10 @@ let CHATSEEN=0;
 function chatVisible(){ return !$("chatPanel").hidden; }
 /* الزر العائم يبين في أي غرفة — في الانتظار وفي اللعب */
 function chatSync(){
-  const on=isOnline();
-  $("chatFab").hidden=!on;
-  if(!on){ $("chatPanel").hidden=true; CHATSEEN=0; }
+  /* يبين في أي جلسة — حتى مع البوتات — وإلا يظن اللاعب إن الدردشة انشالت.
+     داخل اللوح نوضّح إنها تشتغل مع الأصحاب بس. */
+  $("chatFab").hidden = !(isOnline() || (S && S.phase));
+  if(!isOnline())CHATSEEN=0;
   chatBadge();
 }
 function chatBadge(){
@@ -2034,6 +2037,14 @@ function chatOpen(v){
 }
 function renderChat(){
   const box=$("chatBox"); if(!box)return;
+  const row=$("chatRow");
+  if(!isOnline()){                      // بوتات أو تمرير الجوال — ما فيه أحد نكلّمه
+    if(row)row.hidden=true;
+    box.innerHTML=`<p class="empty">الدردشة تشتغل لما تلعب <b>مع أصحابك</b> في غرفة.<br>
+      هنا انت ضد بوتات — ما فيه أحد تكلّمه.</p>`;
+    chatBadge(); return;
+  }
+  if(row)row.hidden=false;
   const list=(NET&&NET.chat)||[];
   if(!list.length){
     box.innerHTML=`<p class="empty">ما فيه رسائل بعد.<br>اكتب شي لأصحابك.</p>`;
