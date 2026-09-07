@@ -261,6 +261,11 @@ button.act[disabled]{opacity:.35;cursor:not-allowed}
   border:0;padding:0 8px;line-height:1.8}
 .chatbox .empty b{color:var(--ink-2)}
 .chatrow[hidden]{display:none}
+.updbar{position:fixed;inset-inline:0;top:0;z-index:60;background:var(--warn);color:#111;
+  font-size:13px;font-weight:600;padding:9px 14px;display:flex;align-items:center;gap:10px;
+  justify-content:center}
+.updbar button{background:#111;color:#fff;border:0;border-radius:6px;padding:6px 14px;
+  font:inherit;font-size:12.5px;cursor:pointer}
 .chatbox p{margin:0;color:var(--ink-2);padding:6px 0;border-bottom:1px solid var(--rule);line-height:1.55;
   overflow-wrap:anywhere}
 .chatbox p:last-child{border-bottom:0}
@@ -972,6 +977,39 @@ function endScreen(win,standings,why,party){
    فيش كلاي، وتصفيق وألعاب نارية حقيقية للفوز. ما فيه أي نغمات مركّبة.
    كل الملفات موحّدة المستوى بالسمع (مو بالذروة) عشان ما يطلع صوت أعلى
    من صوت، وتنحمّل مرة وحدة أول ما يلمس اللاعب الشاشة. */
+/* ---------- كشف النسخة القديمة ----------
+   GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
+   اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
+   نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
+const BUILD="20260908-0012";
+function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
+  location.replace(u.toString()); }catch(e){ location.reload(); } }
+function updBar(v){
+  if($("updbar"))return;
+  const d=document.createElement("div"); d.id="updbar"; d.className="updbar";
+  d.innerHTML=`نزل تحديث للعبة <button onclick="bust('${v}')">حدّث</button>`;
+  document.body.appendChild(d);
+}
+let UPDT=0;
+async function checkUpdate(){
+  if(Date.now()-UPDT<120000)return; UPDT=Date.now();
+  try{
+    const r=await fetch(location.pathname+"?u="+Date.now(),{cache:"no-store"});
+    if(!r.ok)return;
+    const m=(await r.text()).match(/const BUILD="([^"]+)"/);
+    if(!m||m[1]===BUILD)return;
+    /* حراسة ضد اللف: لو حدّثنا لنفس الرقم ولا تغيّر شي، نوقف */
+    let n=0; try{ n=+(sessionStorage.getItem("dagesh-upd")||0) }catch(e){}
+    const cur=new URL(location.href).searchParams.get("v");
+    if(cur===m[1]||n>=2)return;
+    try{ sessionStorage.setItem("dagesh-upd",String(n+1)) }catch(e){}
+    if(!S && !isOnline())return bust(m[1]);      // ما فيه لعب — نحدّث بهدوء
+    updBar(m[1]);                                 // في نص جولة — نخليها باختياره
+  }catch(e){}
+}
+addEventListener("load",()=>setTimeout(checkUpdate,2500));
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden)checkUpdate(); });
+
 const SFXDIR="sfx/";
 const SFXFILES=["card1","card2","card3","card4","slide1","slide2","slide3","slide4",
   "fold1","fold2","shuffle","fan","chip1","chip2","chip3","chipsWin","chipsHit",
