@@ -913,7 +913,7 @@ function endSession(champ){
   const best=champ||left[0]||S.players[0];
   S.phase="over";
   const why = champ ? `وصل هدف ${fmt(goal())}`
-            : left.length<=endAt() ? `بقي ${endAt()} لاعبين — الأعلى رصيداً يفوز` : "";
+            : left.length<=endAt() ? "ما بقي غير لاعبين — الأعلى رصيداً يفوز" : "";
   const standings=S.players.slice().sort((a,b)=>b.chips-a.chips)
                    .map(p=>({name:p.name,chips:p.chips}));
   const win={name:best.name,chips:best.chips,seat:best.i};
@@ -938,16 +938,18 @@ function endScreen(win,standings,why,party){
 }
 
 /* ================= الصوت =================
-   ملفات صوت حقيقية من Kenney (رخصة CC0) — ورق ينرمى، فيش، وجنقل فوز.
-   تنحمّل مرة وحدة أول ما يلمس اللاعب الشاشة، وتنعزف من الذاكرة عشان ما يصير تأخير. */
+   تسجيلات فولي حقيقية برخصة CC0 (Freesound): ورق ينحط على الطاولة،
+   فيش كلاي، وتصفيق وألعاب نارية حقيقية للفوز. ما فيه أي نغمات مركّبة.
+   كل الملفات موحّدة المستوى بالسمع (مو بالذروة) عشان ما يطلع صوت أعلى
+   من صوت، وتنحمّل مرة وحدة أول ما يلمس اللاعب الشاشة. */
 const SFXDIR="sfx/";
 const SFXFILES=["card1","card2","card3","card4","slide1","slide2","slide3","slide4",
   "fold1","fold2","shuffle","fan","chip1","chip2","chip3","chipsWin","chipsHit",
-  "boom1","boom2","boomLow","win","win2","lose","party","turn"];
-let AC=null, BUF=Object.create(null), SFXASKED=false, MG=null;
+  "boom1","boom2","boomLow","win","win2","lose","party","turn","rocket"];
+let AC=null, BUF=Object.create(null), SFXASKED=0, MG=null;
 
 /* ثلاث درجات: هادي (الافتراضي)، عادي، صامت */
-const VOLS=[{k:"soft",g:.32,ic:"🔉"},{k:"loud",g:.62,ic:"🔊"},{k:"off",g:0,ic:"🔇"}];
+const VOLS=[{k:"soft",g:.34,ic:"🔉"},{k:"loud",g:.66,ic:"🔊"},{k:"off",g:0,ic:"🔇"}];
 let VOLI=(()=>{ try{ const v=localStorage.getItem("dagesh-vol");
     if(v!==null){const i=+v; if(i>=0&&i<VOLS.length)return i;}
     if(localStorage.getItem("dagesh-mute")==="1")return 2;
@@ -957,14 +959,14 @@ let MUTED=VOLS[VOLI].g===0;
 function ac(){ if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
   if(AC&&AC.state==="suspended")AC.resume(); return AC; }
 
-/* كل الأصوات تمر من هنا. الفلتر المنخفض يشيل الحدّة اللي تعوّر الأذن
-   من تسجيلات قصيرة زي الورق والفيش، والعالي يشيل الطنين المكتوم. */
+/* كل الأصوات تمر من هنا. قصّة خفيفة من فوق تشيل الفحيح، ومن تحت
+   تشيل الطنين — والباقي يوصل زي ما هو لأن التسجيلات نظيفة وموحّدة. */
 function bus(){
   const c=ac(); if(!c)return null;
   if(!MG){
     MG=c.createGain();
-    const lp=c.createBiquadFilter(); lp.type="lowpass";  lp.frequency.value=4600; lp.Q.value=.55;
-    const hp=c.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=120;  hp.Q.value=.7;
+    const lp=c.createBiquadFilter(); lp.type="lowpass";  lp.frequency.value=7200; lp.Q.value=.5;
+    const hp=c.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=105;  hp.Q.value=.7;
     MG.connect(lp); lp.connect(hp); hp.connect(c.destination);
   }
   MG.gain.value=VOLS[VOLI].g;
@@ -972,9 +974,13 @@ function bus(){
 }
 
 function sfxLoad(){
-  if(SFXASKED)return; SFXASKED=true;
   const c=ac(); if(!c)return;
-  SFXFILES.forEach(n=>{
+  const missing=SFXFILES.filter(n=>!BUF[n]);
+  if(!missing.length)return;
+  /* لو النت قطع أول مرة، نعيد المحاولة بدل ما تظل اللعبة صامتة للأبد */
+  if(SFXASKED && Date.now()-SFXASKED < 8000)return;
+  SFXASKED=Date.now();
+  missing.forEach(n=>{
     fetch(SFXDIR+n+".mp3")
       .then(r=>r.ok?r.arrayBuffer():Promise.reject(0))
       .then(b=>new Promise((ok,no)=>c.decodeAudioData(b,ok,no)))
@@ -996,60 +1002,42 @@ function play(name,vol,at,rate){
     const src=c.createBufferSource(); src.buffer=b;
     src.playbackRate.value=rate||1;
     const g=c.createGain();
-    const t=c.currentTime+(at||0), v=(vol==null?.3:vol);
-    /* صعود بسيط 8 ملّي — يكسر الطقّة الحادة في أول الصوت */
+    const t=c.currentTime+(at||0), v=(vol==null?.55:vol);
+    /* الملفات نفسها فيها فيد دخول، فما نحتاج نعوّم البداية —
+       صعود 1.5 ملّي بس عشان ما تطلع طقّة من بداية الموجة */
     g.gain.setValueAtTime(0,t);
-    g.gain.linearRampToValueAtTime(v,t+0.008);
+    g.gain.linearRampToValueAtTime(v,t+0.0015);
     src.connect(g); g.connect(out);
     src.start(t);
   }catch(e){}
 }
 
-/* دفقة ضجيج مفلتر — باقية لصفير الصاروخ بس، لأن ما فيه تسجيل مناسب له */
-function nz(o){
-  const c=ac(), out=bus(); if(!c||!out||MUTED)return;
-  const dur=o.dur, n=Math.max(1,Math.floor(c.sampleRate*dur));
-  const buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
-  const sh=o.shape||3;
-  for(let k=0;k<n;k++){ const t=k/n; d[k]=(Math.random()*2-1)*Math.pow(1-t,sh); }
-  const src=c.createBufferSource(); src.buffer=buf;
-  const f=c.createBiquadFilter(); f.type=o.type||"bandpass";
-  const t0=c.currentTime+(o.at||0);
-  f.frequency.setValueAtTime(o.f,t0);
-  if(o.to)f.frequency.exponentialRampToValueAtTime(o.to,t0+dur);
-  f.Q.value=o.q||1;
-  const g=c.createGain(); g.gain.value=o.vol;
-  src.connect(f);f.connect(g);g.connect(out);
-  src.start(t0); src.stop(t0+dur+0.02);
-}
-
-function sCard(v,at){ play(pickOne(["card1","card2","card3","card4"]),.22*(v||1),at||0,vary()); }
-function sSlide(v,at){ play(pickOne(["slide1","slide2","slide3","slide4"]),.16*(v||1),at||0,vary()); }
-function sChip(at){ play(pickOne(["chip1","chip2","chip3"]),.22,at||0,vary()); }
+function sCard(v,at){ play(pickOne(["card1","card2","card3","card4"]),.55*(v||1),at||0,vary()); }
+function sSlide(v,at){ play(pickOne(["slide1","slide2","slide3","slide4"]),.55*(v||1),at||0,vary()); }
+function sChip(at){ play(pickOne(["chip1","chip2","chip3"]),.45,at||0,vary()); }
 
 function sfx(kind){
   if(MUTED)return;
   try{
     switch(kind){
-      case "deal":   play("fan",.15,0,1);
-                     for(let k=0;k<4;k++)sCard(.5,.2+k*.13); break;
+      case "deal":   play("fan",.5);                       // مروحة الورق ثم أربع ورقات
+                     for(let k=0;k<4;k++)sCard(.75,.22+k*.14); break;
       case "card":   sCard(1); break;
-      case "shuffle":play("shuffle",.15); break;
+      case "shuffle":play("shuffle",.5); break;
       case "chip":   sChip(0); break;
-      case "fold":   play(pickOne(["fold1","fold2"]),.18,0,vary()); break;
-      case "turn":   play("turn",.12); break;
-      case "dagesh": sCard(1,0); sCard(1,.085); sCard(1,.17);
-                     play("chipsHit",.18,.26); break;
-      case "win":    play(pickOne(["win","win2"]),.30);
-                     play("chipsWin",.17,.14); break;
-      case "lose":   play("lose",.19); break;
-      case "msg":    play("turn",.07,0,1.25); break;
-      case "rocket": nz({dur:.55,vol:.035,f:280,to:2600,q:3.2,shape:.9}); break;
-      case "boom":   play(pickOne(["boom1","boom2","boomLow"]),.22,0,vary()); break;
-      case "party":  play("party",.34);
-                     play("chipsWin",.18,.38);
-                     for(let k=0;k<6;k++)sChip(1.2+k*.09);
-                     break;
+      case "fold":   play(pickOne(["fold1","fold2"]),.5,0,vary()); break;
+      case "turn":   play("turn",.42); break;
+      case "dagesh": sCard(1,0); sCard(1,.09); sCard(1,.18);
+                     play("chipsHit",.6,.3); break;
+      /* الفوز بالجولة: الفلوس تنسحب لك — بدون أي نغمة */
+      case "win":    play(pickOne(["win","win2"]),.7);
+                     play("chipsWin",.5,.28); break;
+      case "lose":   play("lose",.5); break;
+      case "msg":    play("turn",.28,0,1.2); break;
+      case "rocket": play("rocket",.45,0,.95+Math.random()*.12); break;
+      case "boom":   play(pickOne(["boom1","boom2","boomLow"]),.6,0,vary()); break;
+      /* المليون: تصفيق وهتاف حقيقي */
+      case "party":  play("party",.85); break;
     }
   }catch(e){}
 }
@@ -1576,7 +1564,7 @@ function rules(){
     ولو أحد فلّس وبقيتم اثنين (أو ثلاثة إذا بدأتم 7 فأكثر)، الأعلى رصيداً يفوز.</div>
 
   <p class="credit">رسوم الأوراق: Vectorized Playing Cards 1.3 — Copyright 2011 Chris Aguilar، برخصة LGPL 3.</p>
-  <p class="credit">الأصوات: مكتبات Kenney الصوتية (Casino / Impact / Interface / Music Jingles) برخصة CC0.</p>
+  <p class="credit">الأصوات: تسجيلات فولي من Freesound برخصة CC0 — ورق وفيش وتصفيق وألعاب نارية.</p>
   <button class="act b-brass wide" onclick="closeRules()">فهمت، يالله نلعب</button>`);
 }
 function setup(){
@@ -1732,6 +1720,13 @@ const TOP=c=>({hub:`dagesh26/${c}/hub`, all:`dagesh26/${c}/all`,
 
 let TR=null;                                   // {cli, code, t, role}
 function trClose(){ try{ TR&&TR.cli&&TR.cli.end(true) }catch(e){} TR=null; }
+/* نمهّل الوسيط لحظة يطلّع آخر الرسائل (إغلاق الغرفة، وداع المضيف) قبل ما نقطع */
+function trCloseSoon(ms){
+  const t=TR; TR=null;
+  if(!t)return;
+  try{ t.cli.options.reconnectPeriod=0 }catch(e){}   // ما يحاول يرجع بعد ما نقفل
+  setTimeout(()=>{ try{ t.cli.end(false) }catch(e){} },ms||350);
+}
 
 /* يفتح الاتصال بالوسيط ويجرّب البدائل لو فشل */
 function trConnect(code,role,onMsg,onReady,onFail,idx){
@@ -1908,7 +1903,7 @@ function stateFor(seat){
     dealer:S.dealer,handNo:S.handNo,log:S.log,revisions:S.revisions,
     revealed:[...S.revealed],yourSeat:spec?-1:seat,spectator:spec,
     players:S.players.map(p=>({i:p.i,name:p.name,chips:p.chips,bet:p.bet,folded:p.folded,
-      out:p.out,note:p.note,resp:p.resp,share:p.share,askOut:p.askOut,
+      out:p.out,bot:!!p.bot,note:p.note,resp:p.resp,share:p.share,askOut:p.askOut,
       hand:(!spec&&p.i===seat)||S.revealed.has(p.i)?p.hand:[],
       eval:(!spec&&p.i===seat)||S.revealed.has(p.i)?p.eval:null}))};
 }
@@ -1992,8 +1987,13 @@ function kick(cid){
   trToPeer(cid,{t:"kicked"});
   NET.roster=NET.roster.filter(x=>x.cid!==cid);
   if(S&&S.phase&&r.role==="player"&&S.players[r.seat]){
-    S.players[r.seat].out=true; S.players[r.seat].folded=true;
+    const q=S.players[r.seat];
+    q.out=true; q.folded=true; q.resp="ok"; q.askOut=false;
     say(`${r.name} انطرد من الجلسة`);
+    /* لو كان الدور عليه أو كان هو المايك، لازم ندفع الجولة بنفسنا وإلا وقفت */
+    if(S.phase==="betting"&&S.order[S.turn]===r.seat){ S.turn++; advance(); }
+    else if(S.phase==="offer") runResponses();
+    else if(S.phase==="mic"&&S.boss===r.seat){ say("المايك انطرد — نكشف الورق","dg"); dagesh(r.seat); }
   }
   pushRoster(); pushState(); if(S)render();
 }
@@ -2007,6 +2007,7 @@ function hostRoom(name,cap,pub,tries){
       <div class="ctl"><button class="act b-brass" onclick="location.reload()">أعد التحميل</button>
       <button class="act b-quiet" onclick="ovHide();setup()">رجوع</button></div>`);
   }
+  browseClose();
   const code=mkCode();
   ovShow(`<div class="hero sm"><h2>جاري إنشاء الغرفة…</h2><p>نجهّز لك رمز الغرفة.</p></div>
     <div class="conn" id="netConn">نتصل بالوسيط…</div>
@@ -2058,7 +2059,7 @@ function autoIfOffline(){
   const t=whoseTurn(); if(t<0)return;
   if(S.players[t]&&S.players[t].bot){ clearTimeout(S._autoT); S._autoT=null; return; }
   const r=NET.roster.find(x=>x.role==="player"&&x.seat===t);
-  if(!r||r.online){ clearTimeout(S._autoT); S._autoT=null; return; }
+  if(r&&r.online){ clearTimeout(S._autoT); S._autoT=null; return; }   // موجود وشغّال — ننتظره
   if(S._autoFor===t&&S._autoT)return;
   clearTimeout(S._autoT); S._autoFor=t;
   S._autoT=setTimeout(()=>{
@@ -2079,7 +2080,7 @@ function say2(t){ if(S&&S.phase){say(t);} }
 
 /* ---------- الضيف ---------- */
 function joinRoom(name,code,tries,bidx){
-  tries=tries||0;
+  tries=tries||0; browseClose();
   ovShow(`<div class="hero sm"><h2>جاري الدخول…</h2><p>نتصل بغرفة <b>${code}</b>.</p></div>
     <div class="conn" id="netConn">نتصل بالوسيط…</div>
     <div class="ctl" style="margin-top:14px"><button class="act b-quiet" onclick="leaveRoom()">إلغاء ورجوع</button></div>`);
@@ -2093,7 +2094,7 @@ function joinRoom(name,code,tries,bidx){
       if(!NET||NET.seat!==null||!NET.isHost===false){}
       if(!NET||NET.seat!==null){clearInterval(poke);return;}
       if(++n>6){ clearInterval(poke);
-        netStatus("ما فيه غرفة بهذا الرمز، أو المضيف مقفل الصفحة",true); return; }
+        netStatus("ما فيه غرفة بهذا الرمز، أو المضيف مقفل الصفحة. ولو انت فاتح نفس الغرفة على هذا الجهاز في تبويب ثاني، افتحها من جهاز غيره.",true); return; }
       trToHost({t:"hello",name});
     },2500);
     NET._poke=poke;
@@ -2106,7 +2107,7 @@ function joinRoom(name,code,tries,bidx){
   });
 }
 function guestOnMsg(topic,d){
-  if(!NET)return;
+  if(!NET||NET.closed)return;              // انطردنا أو انقفلت الغرفة — ما نستقبل شي بعدها
   if(topic==="__host__"){                       // إعلان المضيف اختفى = طلع
     if(!d && NET.seat!==null && !NET.closed) hostGone();
     return;
@@ -2116,15 +2117,23 @@ function guestOnMsg(topic,d){
   else if(d.t==="roster"){ NET.lobby=d; if(!S||!S.phase)lobbyGuest(); if(S)render(); }
   else if(d.t==="chat"){ NET.chat=d.list||[]; renderChat(); }
   else if(d.t==="state"){ ovHide(); applyState(d.s); NET.lastState=d.s; saveRoom(); }
-  else if(d.t==="kicked"){ NET.closed=true; ovShow(`<div class="hero sm"><h2>انطردت من الغرفة</h2>
-      <p>المضيف طلّعك من الجلسة.</p></div>
-      <button class="act b-brass wide" onclick="leaveRoom()">رجوع</button>`); }
+  else if(d.t==="kicked"){ endedByHost("انطردت من الغرفة","المضيف طلّعك من الجلسة.",false); }
   else if(d.t==="reveal"){ revealSheet(d.shown,d.winners,d.over); }
   else if(d.t==="over"){ S&&(S.phase="over"); endScreen(d.win,d.standings,d.why,d.party); }
   else if(d.t==="hostleft"){ hostGone(); }
-  else if(d.t==="closed"){ NET.closed=true; clearRoom();
-      ovShow(`<div class="hero sm"><h2>المضيف أنهى الجلسة</h2><p>الغرفة انتهت بإرادة المضيف.</p></div>
-      <button class="act b-brass wide" onclick="leaveRoom()">رجوع للبداية</button>`); }
+  else if(d.t==="closed"){ endedByHost("المضيف أنهى الجلسة","الغرفة انتهت بإرادة المضيف.",true); }
+}
+
+/* انطردنا أو انقفلت الغرفة: نقطع الاتصال على طول.
+   بدونه نظل مشتركين ونستقبل حالة الجولة، وأول تحديث يخفي الرسالة ويرجّعنا للطاولة. */
+function endedByHost(title,msg,clear){
+  if(!NET)return;
+  NET.closed=true;
+  if(clear)clearRoom();
+  keepAwake(false); trClose();
+  NET=null; S=null;
+  ovShow(`<div class="hero sm"><h2>${title}</h2><p>${msg}</p></div>
+    <div class="ctl"><button class="act b-brass" onclick="ovHide();setup()">رجوع للبداية</button></div>`);
 }
 
 /* ---------- المضيف طلع: واحد منهم يستلم ---------- */
@@ -2153,22 +2162,32 @@ function takeOver(){
     if(!NET||!NET.migrating)return;
     NET.migrating=false;
     trClose();
-    const mySeat=Math.max(0,known.findIndex(r=>r.cid===CID));
-    NET={isHost:true,code,me:myName,seat:mySeat,role:"player",cap:Math.max(4,known.length),
-         chat:[],bots:0,botDiff:"mid",
-         roster:known.map(r=>({cid:r.cid||("?"+r.seat),name:r.name,seat:r.seat,role:"player",
-                               online:r.cid===CID}))};
+    /* نبني الطاولة من آخر لقطة وصلتنا: فيها كل المقاعد — بشر وبوتات — وأرصدتهم.
+       قبل كنا نبنيها من البشر بس، فتختفي البوتات ويصير العدد أقل من الحد
+       وتنتهي الجلسة فجأة أول ما يستلم أحد الاستضافة. */
+    const fromSnap = snap && snap.players && snap.players.length>=2;
+    const seats = fromSnap
+      ? snap.players.map((q,k)=>({seat:k,name:q.name,bot:!!q.bot,chips:q.chips,out:!!q.out}))
+      : known.map(r=>({seat:r.seat,name:r.name,bot:false,chips:null,out:false}));
+    const cidAt = k => { const r=known.find(x=>x.seat===k); return (r&&r.cid)||null; };
+    let mySeat = seats.findIndex(x=>cidAt(x.seat)===CID);
+    if(mySeat<0) mySeat = Math.max(0, seats.findIndex(x=>!x.bot));
+    const humans = seats.filter(x=>!x.bot);
+    NET={isHost:true,code,me:myName,seat:mySeat,role:"player",cap:Math.max(4,seats.length),
+         chat:[],bots:seats.filter(x=>x.bot).length,botDiff:"mid",
+         roster:humans.map(x=>({cid:cidAt(x.seat)||("?"+x.seat),name:x.name,seat:x.seat,
+                                role:"player",online:cidAt(x.seat)===CID}))};
     trConnect(code,"host",hostOnMsg,()=>{
       trAnnounceHost(true,myName); keepAwake(true);
-      const names=known.map(r=>r.name);
-      newSession(names.length,"online","mid",names);
-      if(snap&&snap.players)S.players.forEach((q,k)=>{
-        const o=snap.players[k]; if(o){q.chips=o.chips;q.out=o.out;}
-      });
-      S.players.forEach(q=>q.bot=false);
+      newSession(seats.length,"online","mid",seats.map(x=>x.name));
+      S.players.forEach((q,k)=>{ const o=seats[k]; if(!o)return;
+        q.bot=o.bot; if(o.chips!=null)q.chips=o.chips; q.out=o.out; });
+      NET.botSeats = S.players.findIndex(q=>q.bot)<0 ? S.players.length
+                                                     : S.players.findIndex(q=>q.bot);
       S.viewer=mySeat;
       say(`${myName} استلم الاستضافة — الجولة أُلغيت ونبدأ من جديد`,"hi");
       startHand(); pushRoster(); pushState(); render();
+      advance();                                  // لو أول دور لبوت يتحرّك لحاله
     },()=>{ netStatus("ما قدرنا نكمّل — ابدأوا غرفة جديدة",true); });
   },1200);
 }
@@ -2276,7 +2295,7 @@ function hostStepOut(){
   broadcast({t:"hostleft"});
   trAnnounceHost(false);
   keepAwake(false);
-  trClose();
+  trCloseSoon(400);
   const room=lastRoom();
   NET=null; S=null; ovHide(); setup();
   setTimeout(()=>{ if(room)ovShow(`<div class="hero sm"><h2>طلعت من الغرفة</h2>
@@ -2288,12 +2307,14 @@ function hostStepOut(){
 
 function leaveRoom(){
   browseClose();
+  let flush=false;
   if(NET){
     if(isHost()){ lobbyBeat(false); broadcast({t:"closed"}); trAnnounceHost(false); }
     else trToHost({t:"bye"});
+    flush=true;
   }
   keepAwake(false);
-  trClose();
+  if(flush)trCloseSoon(400); else trClose();
   NET=null; S=null;
   try{history.replaceState(null,"",location.pathname)}catch(e){}
   ovHide(); setup();

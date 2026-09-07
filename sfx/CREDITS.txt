@@ -1,9 +1,35 @@
 Sound effects used in Dagesh
-============================
-Source : Kenney (https://kenney.nl) — Casino Audio, Impact Sounds,
-         Interface Sounds, and Music Jingles packs.
-License: CC0 1.0 Universal (public domain dedication).
-         https://creativecommons.org/publicdomain/zero/1.0/
-
-Files were converted from .ogg to .mp3, trimmed and level-matched.
+===========================
+All sources are released under CC0 1.0 (public domain dedication):
+https://creativecommons.org/publicdomain/zero/1.0/
 No attribution is required under CC0, but it is given here anyway.
+
+From freesound.org
+------------------
+  cards (card1-4, slide1-4, fold1, shuffle, fan, lose, turn)
+      "Shuffle Cards Sounds (SE477)" — MPooman
+      https://freesound.org/s/666776/
+  card handling (fold2)
+      "Foley_Object_Cards_Shuffle_Mono" — Nox_Sound
+      https://freesound.org/s/562179/
+  clay chips (chip1-3, chipsHit, win, win2)
+      "Casino Chip Sounds (SE479)" — MPooman
+      https://freesound.org/s/667567/
+  chips pushed to the winner (chipsWin)
+      "AllInPushChips" — Joma86
+      https://freesound.org/s/532861/
+  applause and cheering (party)
+      "Voice_Crowd_Small_Expression_Applause_Cheer_Stereo" — Nox_Sound
+      https://freesound.org/s/752709/
+  firework bursts (boom1, boom2, boomLow)
+      "Three Outdoor Clean Explosions" — unfa
+      https://freesound.org/s/613673/
+  rocket launch (rocket)
+      "firework_rocket_ignition" — derplayer
+      https://freesound.org/s/587173/
+
+Processing
+----------
+Long recordings were sliced into single hits at their transients, trimmed,
+level-matched by short-window loudness (not by peak, so no single effect
+jumps out), peak-limited, and encoded to mono MP3. Total set: ~250 KB.
