@@ -137,6 +137,29 @@ button{font:inherit;cursor:pointer}
 .seat .note{font-size:9px;color:var(--ink-3);text-align:center;line-height:1.3;min-height:11px;
   max-width:100%;overflow:hidden}
 .you-tag{display:none}
+/* الأعلى رصيد: تاج وإطار ذهبي */
+.seat.lead .ava{border:2px solid #E8C15A;
+  box-shadow:0 0 0 2px rgba(232,193,90,.22),0 0 14px rgba(232,193,90,.5)}
+.seat.lead .chipbal{color:#E8C15A;font-weight:700}
+.ava .crown-i{position:absolute;top:-15px;left:50%;transform:translateX(-50%) rotate(-8deg);
+  font-size:15px;line-height:1;font-style:normal;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+/* مين داقش */
+.seat .dgtag{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);z-index:4;
+  background:var(--accent);color:#fff;font-size:9px;font-weight:800;padding:1px 8px;border-radius:99px;
+  font-family:"Alexandria",sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.dgsplash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:7;pointer-events:none;
+  font-family:"Alexandria",sans-serif;font-weight:800;font-size:28px;color:#fff;white-space:nowrap;
+  background:var(--accent);padding:10px 22px;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+.dgsplash.go{animation:dgPop .55s cubic-bezier(.3,1.6,.4,1) both}
+@keyframes dgPop{from{transform:translate(-50%,-50%) scale(.3) rotate(-6deg);opacity:0}}
+.dgmark{font-style:normal;font-size:9.5px;font-weight:800;background:var(--accent);color:#fff;
+  border-radius:99px;padding:1px 7px;margin-inline-start:5px;vertical-align:2px}
+.rdy{font-size:11.5px;color:var(--ink-3);text-align:center;margin:10px 0 8px;min-height:1em}
+/* يكتب… */
+.typing{font-size:11.5px;color:var(--ink-3);min-height:17px;padding:4px 2px 0}
+.chatbtn.typing::after{content:"";position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);
+  width:16px;height:4px;border-radius:2px;background:var(--warn);animation:tpb .9s ease-in-out infinite}
+@keyframes tpb{50%{opacity:.25}}
 
 .fly{position:absolute;transform:translate(-50%,-50%);z-index:5;pointer-events:none;
   font-family:"Alexandria",sans-serif;font-weight:800;font-size:13px;padding:5px 11px;border-radius:99px;
@@ -227,6 +250,15 @@ button.act[disabled]{opacity:.35;cursor:not-allowed}
 .stp:active{background:var(--paper-2)}
 .left{font-size:11.5px;color:var(--ink-3);text-align:center}
 .left.bad{color:var(--accent)}
+.sp-ctl{display:flex;align-items:center;gap:6px;margin-inline-start:auto}
+.sp-row.has-big{flex-wrap:wrap;row-gap:5px;padding-bottom:4px;border-bottom:1px dashed var(--rule)}
+.sp-row.has-big .nm{flex:1 1 100%}
+.sp-row.has-big .sp-ctl{margin-inline:auto}
+.sp-row.has-big .val{min-width:78px}
+.stp.big{width:auto;min-width:54px;padding:0 8px;font-size:12.5px;font-weight:800;
+  direction:ltr;unicode-bidi:isolate;
+  font-family:"Alexandria",sans-serif;color:var(--warn);
+  border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
 
 /* ---------- الشريط الجانبي ---------- */
 .rail section+section{margin-top:22px}
@@ -567,6 +599,7 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
           <span class="ph" id="phase"></span>
         </div>
         <div class="seats" id="seats"></div>
+        <div class="dgsplash" id="dgsplash" hidden></div>
       </div>
 
 
@@ -601,6 +634,7 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
   <div class="cp-head"><b>الدردشة</b>
     <button class="cp-x" onclick="chatOpen(false)" aria-label="سكّر">×</button></div>
   <div class="chatbox" id="chatBox"></div>
+  <div class="typing" id="chatTyping"></div>
   <div class="chatrow" id="chatRow">
     <input id="chatIn" maxlength="160" placeholder="اكتب رسالة…" autocomplete="off">
     <button class="act b-brass" id="chatSend">إرسال</button>
@@ -729,6 +763,12 @@ function startHand(){
   S.epoch=(S.epoch||0)+1;
   S.handNo++;
   pileClear();S.boss=-1;S.revealed=new Set();S.log=[];S.revisions=0;window._sp=null;
+  S.dgBy=-1;S.rev=null;S.solo=null;S.ready=new Set();S.overPending=false;
+  /* الشدّة على قد اللي باقين: ٣ لاعبين = أكة وشايب وبنت، ٤ = ومعها الولد…
+     فكل ما طلع أحد تصغر الشدّة وتبقى أقوى الأوراق. */
+  const prevNr=S.nr;
+  buildRanks(alive().length);
+  S.nr=ranks.length;
   const d=deck();
   for(const p of S.players){
     p.bet=0;p.folded=p.out;p.acted=false;p.note="";p.resp=null;p.share=0;p.askOut=false;p._k=null;p.hand=[];
@@ -736,6 +776,8 @@ function startHand(){
   }
   do{S.dealer=(S.dealer+1)%S.n;}while(S.players[S.dealer].out);
   say(`الجولة ${S.handNo} — ${S.players[S.dealer].name} لخبط الورق`,"hi");
+  if(prevNr&&prevNr!==S.nr)
+    say(`بقي ${S.nr} لاعبين — الشدّة صارت ${ranks.map(r=>AR[r]).join("، ")} بس`,"hi");
   S.order=[];let k=S.dealer;
   for(let c=0;c<S.n;c++){k=(k+1)%S.n;if(!S.players[k].out)S.order.push(k);}
   S.turn=0;S.phase="betting";
@@ -790,7 +832,13 @@ function endBetting(){
   S.phase="resolving";
   const b=bettors();
   if(b.length===0){say("الكل انسحب — إعادة توزيع","hi");return later(startHand,1300);}
-  if(b.length===1){S.pot=b[0].bet;say(`${b[0].name} راهن لحاله — فاز بالجولة بدون كشف، وما تحرّكت فلوس`,"hi");return finishRound();}
+  if(b.length===1){                    // الكل انسحب: اللي راهن لحاله ياخذ مراهنته كاملة
+    const w=b[0]; S.pot=w.bet; w.chips+=w.bet; S.solo={i:w.i,name:w.name,amt:w.bet};
+    say(`الكل انسحب — ${w.name} ياخذ مراهنته ${fmt(w.bet)}`,"hi");
+    fly(w.i,"+"+fmt(w.bet),"chip");
+    if(w.i===S.viewer&&!isSpec()) sfx("win");
+    return finishRound();
+  }
   let boss=b[0];for(const p of b)if(p.bet>boss.bet)boss=p;
   S.boss=boss.i;
   say(`${boss.name} أخذ المايك بمراهنة ${fmt(boss.bet)}`,"hi");
@@ -832,6 +880,8 @@ function proposeSplit(boss,shares){
 }
 function runResponses(){
   if(S.phase!=="offer")return;
+  const dg=bettors().find(p=>p.resp==="dagesh");      // أول ما واحد يداقش، الكل يقلب — ما ننتظر الباقين
+  if(dg)return dagesh(dg.i);
   const pending=others().filter(p=>p.resp===null);
   if(pending.length===0)return settleOffer();
   const p=pending[0];setViewer(p.i);
@@ -842,7 +892,7 @@ function botRespond(p){
   const st=strength(p,Math.max(1,bettors().length-1)),d=dag();
   const evD=p.bet*(2*st.win-1);                 // ربح متوقّع من الداقش
   if((st.win>d.th||evD>p.share*d.evK)&&Math.random()<d.chance){
-    p.resp="dagesh";say(`${p.name} داقش`,"dg");return;
+    p.resp="dagesh";return;
   }
   if(p.share>=evD*d.acc||S.revisions>=2){p.resp="ok";p.note="وافق";say(`${p.name} وافق على ${fmt(p.share)}`);return;}
   p.resp="no";p.note="رفض";say(`${p.name} رفض ويبي أكثر`);
@@ -851,8 +901,11 @@ function settleOffer(){
   if(S.phase!=="offer")return;          // حارس: ممنوع تتنفّذ مرتين لنفس العرض
   S.phase="settling";
   const list=bettors();
-  if(list.some(p=>p.resp==="dagesh")){S.phase="offer";return dagesh(S.boss);}
+  const dg=list.find(p=>p.resp==="dagesh");
+  if(dg){S.phase="offer";return dagesh(dg.i);}          // اللي داقش فعلاً، مو المايك
   if(list.every(p=>p.resp==="ok")){
+    const bossP=S.players[S.boss];
+    bossP.share=Math.max(0,split()-list.filter(x=>x.i!==S.boss).reduce((a,x)=>a+(x.share||0),0));
     say("الكل وافق على التقسيم — ما انكشفت ولا ورقة","hi");
     /* التقسيمة توزيع جوائز: كل واحد ياخذ حصته، والمايك ياخذ الباقي. محد يدفع. */
     for(const p of list) if(p.share>0){
@@ -903,13 +956,16 @@ function answerOut(p,ok){
 function dagesh(byIdx){
   if(S.phase==="showdown"||S.phase==="done"||S.phase==="over")return;   // حارس ضد التكرار
   S.phase="showdown";
-  say(`داقش — الكل مجبر يقلب ورقه`,"dg");
+  S.dgBy=(byIdx!=null&&byIdx>=0)?byIdx:-1;
+  const who=S.players[S.dgBy];
+  say(who?`${who.name} داقش — الكل مجبر يقلب ورقه`:`داقش — الكل مجبر يقلب ورقه`,"dg");
+  sfx("dagesh");
   const list=bettors();
   for(const p of list)S.revealed.add(p.i);
   let best=list[0];for(const p of list)if(cmp(p.eval,best.eval)>0)best=p;
   const win=list.filter(p=>cmp(p.eval,best.eval)===0);
   render();
-  later(()=>award(win,false,list),500);
+  later(()=>award(win,false,list),1700);
 }
 /* كل لاعب في الكشف يربح مبلغ مراهنته لو فاز، أو يخسره لو انهزم */
 function award(winners,hidden,shown){
@@ -931,17 +987,47 @@ function finishRound(reveal){
   S.pot=0;
   for(const p of S.players)if(!p.out&&p.chips<=0){p.out=true;say(`${p.name} خرج من الجلسة`);}
   S.phase="done";S.gate=false;if(S.mode==="bots")S.viewer=0;
-  render();
+  S.ready=new Set();
   const champ=alive().find(p=>p.chips>=goal());
+  const over=!!champ||alive().length<=endAt();
   if(reveal){
-    const over=!!champ||alive().length<=endAt();
-    if(isOnline()&&isHost()){
-      const slim=a=>a.map(x=>({name:x.name,hand:x.hand,eval:x.eval,bet:x.bet,i:x.i}));
-      broadcast({t:"reveal",shown:slim(reveal.shown),winners:slim(reveal.winners),over});
-    }
-    revealSheet(reveal.shown,reveal.winners,over);
+    /* الكشف ينحفظ في الحالة نفسها، فلو ضاعت رسالته على أحد يطلع له من أول تحديث */
+    const slim=a=>a.map(x=>({name:x.name,hand:x.hand,eval:x.eval,bet:x.bet,i:x.i}));
+    const by=S.players[S.dgBy];
+    S.rev={h:S.handNo,shown:slim(reveal.shown),winners:slim(reveal.winners),over,
+           by:by?by.name:"",byI:by?by.i:-1};
+    S.overPending=over;
+    if(isOnline()&&isHost()) broadcast(Object.assign({t:"reveal"},S.rev));
+    revealSheet(S.rev.shown,S.rev.winners,over,S.rev.by,S.rev.byI);
   }
-  else if(champ||alive().length<=endAt())later(()=>endSession(champ),900);
+  render();
+  if(!reveal&&over) return later(()=>endSession(champ),900);
+  /* في الغرفة: ننتظر الكل يضغط "الجولة الجاية" — أو ٢٥ ثانية لو أحد نايم */
+  if(isOnline()&&isHost()) later(goNext, needReady().length?25000:2500);
+}
+
+/* مين لازم يضغط "الجولة الجاية" قبل ما نبدأ: البشر المتصلين اللي باقين في الجلسة */
+function needReady(){
+  if(!isOnline())return [S.viewer];
+  return NET.roster.filter(r=>r.role==="player"&&r.online&&S.players[r.seat]
+    &&!S.players[r.seat].out&&!S.players[r.seat].bot).map(r=>r.seat);
+}
+function readyInfo(){
+  if(!isOnline()||isHost())
+    return {need:needReady(), has:(S.ready instanceof Set)?S.ready:new Set()};
+  return {need:S.rdyNeed||[], has:new Set(S.ready||[])};
+}
+function readyUp(seat){
+  if(!S||S.phase!=="done")return;
+  if(!(S.ready instanceof Set))S.ready=new Set();
+  S.ready.add(seat);
+  if(!isOnline()||needReady().every(k=>S.ready.has(k)))return goNext();
+}
+function goNext(){
+  if(!S||S.phase!=="done")return;
+  if(OVK==="reveal")ovHide();
+  if(S.overPending)return endSession(alive().find(p=>p.chips>=goal()));
+  startHand();
 }
 function endSession(champ){
   const left=alive().sort((a,b)=>b.chips-a.chips);
@@ -981,7 +1067,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260908-0012";
+const BUILD="20260913-1313";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1348,6 +1434,9 @@ function render(){
   /* اللاعبون حول الطاولة زي الجلسة الحقيقية: انت تحت، والدور يمشي من اليمين لليسار */
   const nn=S.n, small=nn>8;
   $("ring").classList.toggle("tight",small);
+  /* الأعلى رصيد ياخذ تاج — بس لو فعلاً متقدّم، مو وقت ما الكل متساوي */
+  const top2=S.players.filter(p=>!p.out).map(p=>p.chips).sort((a,b)=>b-a);
+  const leadC=(top2.length>1&&top2[0]>top2[1])?top2[0]:null;
   $("seats").innerHTML=S.players.map(p=>{
     const rel=((p.i-S.viewer)%nn+nn)%nn;
     const th=Math.PI/2 - rel*(2*Math.PI/nn);   // عكس عقارب الساعة
@@ -1355,9 +1444,11 @@ function render(){
     const y=50+ (small?41:38)*Math.sin(th);
     const me=p.i===S.viewer, turn=whoseTurn()===p.i, show=S.revealed.has(p.i);
     const isDealer=S.dealer===p.i;
-    return `<div class="seat ${turn?"turn":""} ${p.out||p.folded?"dim":""} ${me?"mine":""}"
+    const lead=leadC!==null&&!p.out&&p.chips===leadC, dgd=S.dgBy===p.i;
+    return `<div class="seat ${turn?"turn":""} ${p.out||p.folded?"dim":""} ${me?"mine":""} ${lead?"lead":""}"
       data-i="${p.i}" style="left:${x}%;top:${y}%">
-      <i class="ava" style="--h:${(p.i*67)%360}">${(p.name||"?").trim().charAt(0)}${isDealer?'<b class="dlr" title="الموزّع">D</b>':""}</i>
+      ${dgd?'<span class="dgtag">داقش</span>':""}
+      <i class="ava" style="--h:${(p.i*67)%360}">${lead?'<b class="crown-i" title="الأعلى رصيد">👑</b>':""}${(p.name||"?").trim().charAt(0)}${isDealer?'<b class="dlr" title="الموزّع">D</b>':""}</i>
       <span class="nm">${p.name}</span>
       <span class="chipbal num">${fmt(p.chips)}</span>
       <span class="betchip ${p.bet?"on":""} num">${p.bet?fmt(p.bet):"—"}</span>
@@ -1369,7 +1460,7 @@ function render(){
   $("pot").textContent=fmt(Math.max(0,...S.players.map(p=>p.bet)));
   $("potLabel").textContent = S.phase==="betting" ? "أعلى مراهنة" : "التقسيمة";
   $("youName").textContent=S.mode==="bots"?"ورقك":`ورق ${v.name}`;
-  $("myChips").textContent=fmt(v.chips);
+  $("myChips").textContent=(leadC!==null&&!v.out&&v.chips===leadC?"👑 ":"")+fmt(v.chips);
   document.querySelector(".myrow").style.display=isSpec()?"none":"";
   $("hand").innerHTML=v.hand.map((c,i)=>`<div class="deal" style="animation-delay:${i*60}ms">${cardEl(c)}</div>`).join("");
   $("proj").textContent=v.hand.length?pdetail(v.eval):"";
@@ -1398,7 +1489,9 @@ function render(){
   S._lastTurn=t0;
   const t=t0, tb=$("turnbar");
   if(S.phase==="showdown"){
-    tb.className="turn dagesh"; tb.innerHTML=`<b>داقش!</b><span>الكل يقلب ورقه</span>`;
+    const dw=S.players[S.dgBy];
+    tb.className="turn dagesh";
+    tb.innerHTML=`<b>${dw?((dw.i===S.viewer&&!isSpec())?"انت داقشت!":esc(dw.name)+" داقش!"):"داقش!"}</b><span>الكل يقلب ورقه</span>`;
   }else if(S.phase==="done"||S.phase==="over"){
     tb.className="turn quiet"; tb.innerHTML=`<b>انتهت الجولة</b><span>القدر انوزّع</span>`;
   }else if(t>=0){
@@ -1417,6 +1510,25 @@ function render(){
   $("phase").textContent=S.boss>=0&&S.phase!=="betting"
     ? `${ph} · المايك مع ${S.players[S.boss].name} (أعلى مراهنة ${fmt(S.players[S.boss].bet)})`
     : ph;
+  // لوحة "فلان داقش!" وسط الطاولة
+  const sp=$("dgsplash");
+  if(sp){
+    const dw=S.phase==="showdown"&&S.players[S.dgBy];
+    if(dw){
+      const txt=(dw.i===S.viewer&&!isSpec())?"انت داقشت!":`${dw.name} داقش!`;
+      if(sp.hidden||sp.dataset.t!==txt){
+        sp.textContent=txt; sp.dataset.t=txt; sp.hidden=false;
+        sp.classList.remove("go"); void sp.offsetWidth; sp.classList.add("go");
+      }
+    }else{ sp.hidden=true; sp.dataset.t=""; }
+  }
+  // عدّاد الجاهزين داخل شاشة الكشف
+  const rd=$("rdy");
+  if(rd){
+    const ri=readyInfo(), got=ri.need.filter(k=>ri.has.has(k)).length;
+    rd.textContent=(isOnline()&&S.phase==="done"&&ri.need.length>1)
+      ? `جاهزين ${got} من ${ri.need.length} — نبدأ لما يضغط الكل، أو تلقائياً بعد ٢٥ ثانية` : "";
+  }
   actions();
 }
 
@@ -1435,8 +1547,19 @@ function actions(){
        <span>تقدر تداقش في أي لحظة، حتى لو مو دورك</span></div>` : "";
   const H=(p,c)=>bar.innerHTML=`<div class="prompt">${p}</div><div class="ctl">${c}</div>${alwaysDagesh}`;
 
-  if(S.phase==="done"||S.phase==="over")
-    return H("الجولة خلصت.",`<button class="act b-brass" onclick="act('next')">الجولة الجاية</button>`);
+  if(S.phase==="done"||S.phase==="over"){
+    const solo=S.solo?(S.solo.i===S.viewer&&!isSpec()
+        ? `الكل انسحب — <b>مراهنتك ${fmt(S.solo.amt)} صارت لك</b>. `
+        : `الكل انسحب — <b>${esc(S.solo.name)}</b> أخذ مراهنته ${fmt(S.solo.amt)}. `):"";
+    if(S.phase==="done"&&isOnline()){
+      const ri=readyInfo(), got=ri.need.filter(k=>ri.has.has(k)).length;
+      if(ri.has.has(S.viewer))
+        return H(`${solo}جاهز ✓ — ننتظر الباقين (${got} من ${ri.need.length})`,"");
+      return H(`${solo}الجولة خلصت.${ri.need.length>1?` جاهزين ${got} من ${ri.need.length}.`:""}`,
+        `<button class="act b-brass" onclick="act('next')">الجولة الجاية</button>`);
+    }
+    return H(`${solo}الجولة خلصت.`,`<button class="act b-brass" onclick="act('next')">الجولة الجاية</button>`);
+  }
 
   // طلبات انسحاب معلّقة عندك كصاحب مايك
   if(S.boss===S.viewer){
@@ -1472,11 +1595,16 @@ function actions(){
       for(const p of list)if(p.i!==S.viewer){window._sp[p.i]=b;u+=b;}
     }
     const used=Object.values(window._sp).reduce((a,b)=>a+b,0),mine=split()-used;
-    const rows=list.filter(p=>p.i!==S.viewer).map(p=>`<div class="sp-row">
-      <span class="nm">${p.name}</span>
-      <button class="stp" onclick="spAdj(${p.i},-1)">−</button>
-      <span class="val num">${fmt(window._sp[p.i]||0)}</span>
-      <button class="stp" onclick="spAdj(${p.i},1)">+</button></div>`).join("");
+    const BIG=bigStep(), kf=n=>(n/1000)+"K";
+    const rows=list.filter(p=>p.i!==S.viewer).map(p=>`<div class="sp-row ${BIG?"has-big":""}">
+      <span class="nm">${esc(p.name)}</span>
+      <div class="sp-ctl">
+        ${BIG?`<button class="stp big" onclick="spAdj(${p.i},-1,${BIG})">−${kf(BIG)}</button>`:""}
+        <button class="stp" onclick="spAdj(${p.i},-1)">−</button>
+        <span class="val num">${fmt(window._sp[p.i]||0)}</span>
+        <button class="stp" onclick="spAdj(${p.i},1)">+</button>
+        ${BIG?`<button class="stp big" onclick="spAdj(${p.i},1,${BIG})">+${kf(BIG)}</button>`:""}
+      </div></div>`).join("");
     return H(`تقسيمتك <b>${fmt(split())}</b> — وهي مراهنتك، وتدفعها من محفظتك للي يوافق. وزّع زي ما تبي — تقدر تعطي واحد أكثر عشان يوافق. لو وافقوا كلهم، ما ينكشف ورق أحد.`,
       `<div class="split">${rows}
         <div class="sp-row" style="border-top:1px solid var(--line);padding-top:7px">
@@ -1514,11 +1642,18 @@ function askDagesh(kind){
       <button class="act b-pom" onclick="ovHide();act('${kind}')">نعم، داقش</button>
     </div>`);
 }
-function spAdj(i,dir){
+/* الخطوة الكبيرة على قد التقسيمة: 145 ألف ← 25K، مليون ← 100K. تحت 40 ألف ما نحتاجها */
+function bigStep(){
+  const t=split(); if(t<40000)return 0;
+  for(const o of [100000,50000,25000,10000]) if(o<=t/4) return o;
+  return 10000;
+}
+function spAdj(i,dir,step){
+  step=step||STEP;
   const cur=window._sp[i]||0,used=Object.values(window._sp).reduce((a,b)=>a+b,0);
-  const next=cur+dir*STEP;
-  if(next<0)return;
-  if(dir>0&&used+STEP>split())return;
+  let next;
+  if(dir>0){ const room=split()-used; if(room<=0)return; next=cur+Math.min(step,room); }  // لو الباقي أقل، نعطيه الباقي
+  else     { if(cur<=0)return; next=Math.max(0,cur-step); }
   window._sp[i]=next;render();
 }
 function uOffer(){
@@ -1548,26 +1683,45 @@ function lockScroll(on){
     window.scrollTo(0,SCROLLY);
   }
 }
-function ovShow(h){ const sh=$("sheet"); sh.innerHTML=h; sh.scrollTop=0;
+/* OVK = نوع النافذة المفتوحة. نحتاجه عشان تحديثات الحالة تسكّر
+   شاشات الانتظار بس — مو الكشف ولا تأكيد الداقش ولا القواعد. */
+let OVK="";
+function ovShow(h,k){ OVK=k||""; const sh=$("sheet"); sh.innerHTML=h; sh.scrollTop=0;
   $("ov").hidden=false; lockScroll(true); }
-function ovHide(){ $("ov").hidden=true; lockScroll(false); }
-function revealSheet(shown,winners,over){
+function ovHide(){ OVK=""; $("ov").hidden=true; lockScroll(false); }
+function showRev(r){
+  if(!NET||!r||NET.seenRev===r.h)return;
+  NET.seenRev=r.h;
+  revealSheet(r.shown,r.winners,r.over,r.by,r.byI);
+}
+function revealSheet(shown,winners,over,by,byI){
+  /* نقارن بالمقعد مو بالكائن: عند الضيوف القائمتين توصل منفصلة،
+     فكانت includes ترجع false دايماً ويطلع الكل خسران */
+  const wset=new Set(winners.map(w=>w.i));
+  const meSeat = isOnline() ? (NET&&NET.seat) : (S?S.viewer:0);
   const rows=shown.slice().sort((a,b)=>cmp(b.eval,a.eval)).map(p=>{
-    const w=winners.includes(p);
+    const w=wset.has(p.i);
     const amt=p.bet?(w?"+":"−")+fmt(p.bet):"—";
     return `<div class="rev-row ${w?"win":"lose"}">
-      <span class="w">${p.name}</span>
+      <span class="w">${esc(p.name)}${p.i===byI?'<em class="dgmark">داقش</em>':""}</span>
       <span class="rc">${p.hand.map(c=>cardEl(c,true)).join("")}</span>
       <span class="p">${pdetail(p.eval)}</span>
       <b class="amt-col">${amt}</b></div>`;}).join("");
+  const W=winners[0];
   const head = winners.length>1
-    ? `<div class="win-banner tie"><b>تعادل</b><span>${winners.map(w=>w.name).join(" و ")} — كل واحد ياخذ مراهنته</span></div>`
-    : `<div class="win-banner"><b>فاز ${winners[0].name}</b>
-        <span>${pdetail(winners[0].eval)} · ربح ${fmt(winners[0].bet)}</span></div>`;
-  ovShow(`<div class="hero sm"><h2>داقش</h2><p>أول ما واحد قلب، الكل قلب.</p></div>
+    ? `<div class="win-banner tie"><b>تعادل</b><span>${winners.map(w=>esc(w.name)).join(" و ")} — كل واحد ياخذ مراهنته</span></div>`
+    : `<div class="win-banner"><b>${W.i===meSeat?"فزت انت":"فاز "+esc(W.name)}</b>
+        <span>${pdetail(W.eval)} · ربح ${fmt(W.bet)}</span></div>`;
+  const byLine = by
+    ? (byI===meSeat ? "انت داقشت — والكل انجبر يقلب ورقه معك."
+                    : `<b>${esc(by)}</b> داقش — والكل انجبر يقلب ورقه معه.`)
+    : "أول ما واحد قلب، الكل قلب.";
+  ovShow(`<div class="hero sm"><h2>${by?(byI===meSeat?"انت داقشت":esc(by)+" داقش"):"داقش"}</h2><p>${byLine}</p></div>
     ${head}
     <div class="rev">${rows}</div>
-    <button class="act b-brass wide" onclick="ovHide();${over?"endSession()":"act('next')"}">${over?"شوف النتيجة":"الجولة الجاية"}</button>`);
+    <p class="rdy" id="rdy"></p>
+    <button class="act b-brass wide" onclick="ovHide();act('next')">${over?"شوف النتيجة":"الجولة الجاية"}</button>`,"reveal");
+  if(S)render();
 }
 let RULES_BACK="setup";
 /* الرجوع من القواعد: للّعبة لو فيه جولة شغّالة، وإلا لشاشة البداية */
@@ -1586,6 +1740,8 @@ function rules(){
     <h3>الورق</h3>
     <p>كل لاعب ياخذ <b>4 أوراق</b>، والشدّة تُبنى على عددكم بالضبط فما يتبقى ولا ورقة.
        يعني كل ورقة في يدك تنفي احتمالات عند غيرك — لو معك ثلاث أكات، مستحيل أحد يجمع رباعية أكات.</p>
+    <p>وكل ما طلع لاعب تصغر الشدّة وتبقى <b>أقوى الأوراق</b>: أربعة لاعبين = أكة وشايب وبنت وولد،
+       ثلاثة = أكة وشايب وبنت.</p>
   </div>
 
   <div class="rule-sec">
@@ -1626,6 +1782,7 @@ function rules(){
   <div class="rule-sec">
     <h3>الانسحاب</h3>
     <p>بعد ما تراهن ما تقدر تنسحب بمزاجك. لازم تطلب إذن صاحب المايك، وهو حر يرفض ويجبرك تكمّل معهم.</p>
+    <p>ولو انسحب الكل وبقيت انت الوحيد اللي راهن، <b>مراهنتك كاملة تصير لك</b>.</p>
   </div>
 
   <div class="rule-goal">يفوز أول لاعب يوصل <b>مليون</b>.
@@ -1967,7 +2124,11 @@ function pushRoster(){ if(!isHost())return; broadcast(rosterMsg());
 
 function stateFor(seat){
   const spec=seat==null||seat<0;
-  return {n:S.n,phase:S.phase,pot:S.pot,boss:S.boss,turn:S.turn,order:S.order,
+  return {n:S.n,nr:S.nr||S.n,dgBy:S.dgBy==null?-1:S.dgBy,solo:S.solo||null,
+    rev:S.phase==="done"?(S.rev||null):null,
+    ready:[...((S.ready instanceof Set)?S.ready:[])],
+    rdyNeed:(S.phase==="done"&&isHost())?needReady():[],
+    phase:S.phase,pot:S.pot,boss:S.boss,turn:S.turn,order:S.order,
     dealer:S.dealer,handNo:S.handNo,log:S.log,revisions:S.revisions,
     revealed:[...S.revealed],yourSeat:spec?-1:seat,spectator:spec,
     players:S.players.map(p=>({i:p.i,name:p.name,chips:p.chips,bet:p.bet,folded:p.folded,
@@ -1983,11 +2144,20 @@ function pushState(){
   }
 }
 function applyState(st){
-  buildRanks(st.n);
+  const prev=S, me=Math.max(0,st.yourSeat);
+  buildRanks(st.nr||st.n);                       // الشدّة ممكن تكون صغرت
   S=Object.assign({},st,{revealed:new Set(st.revealed),
     players:st.players.map(p=>Object.assign({},p,{hand:p.hand||[],bot:false,_k:null})),
-    mode:"online",gate:false,viewer:Math.max(0,st.yourSeat),busy:false,diff:"mid",
+    mode:"online",gate:false,viewer:me,busy:false,diff:"mid",
     spectator:!!st.spectator});
+  /* الأصوات تنعزف عند المضيف بس — فنعزفها هنا للضيف لما تتغير المرحلة */
+  if(prev&&prev.handNo===st.handNo){
+    if(prev.phase!=="showdown"&&st.phase==="showdown") sfx("dagesh");
+    if(!st.spectator&&prev.phase!=="done"&&st.phase==="done"){
+      const a=prev.players&&prev.players[me], b=st.players[me];
+      if(a&&b&&b.chips!==a.chips) sfx(b.chips>a.chips?"win":"lose");
+    }
+  }
   render();
 }
 
@@ -2005,10 +2175,10 @@ function applyAct(seat,type,pl){
     case "fold": if(S.phase!=="betting"||S.order[S.turn]!==seat)return;
                  fold(p);S.turn++;advance();break;
     case "offer":if(S.phase!=="mic"||S.boss!==seat)return;proposeSplit(p,pl.shares);break;
-    case "mic-dagesh": if(S.phase!=="mic"||S.boss!==seat)return;sfx("dagesh");dagesh(seat);break;
+    case "mic-dagesh": if(S.phase!=="mic"||S.boss!==seat)return;dagesh(seat);break;
     case "resp": if(S.phase!=="offer"||p.resp!==null)return;
                  p.resp=pl.r;
-                 if(pl.r==="dagesh"){sfx("dagesh");say(`${p.name} داقش`,"dg");}
+                 if(pl.r==="dagesh"){}
                  else if(pl.r==="ok"){p.note="وافق";say(`${p.name} وافق على ${fmt(p.share)}`);}
                  else{p.note="رفض";say(`${p.name} رفض ويبي أكثر`);}
                  runResponses();break;
@@ -2016,17 +2186,41 @@ function applyAct(seat,type,pl){
     case "dagesh-any":
                  if(S.phase!=="mic"&&S.phase!=="offer")return;
                  if(!p.bet||p.folded||p.out)return;
-                 p.resp="dagesh"; sfx("dagesh"); say(`${p.name} داقش`,"dg");
+                 p.resp="dagesh";
                  dagesh(seat); break;
     case "answerout":if(S.boss!==seat)return;answerOut(S.players[pl.target],pl.ok);break;
-    case "next":     if(S.phase==="done")startHand();break;
+    case "next":     readyUp(seat);break;
   }
   render();
 }
 
 /* ---------- الدردشة ---------- */
+/* ---------- "فلان يكتب…" ----------
+   ما نرسل مع كل حرف: مرة كل ثانيتين ونص بالكثير، والإشارة تنطفي بعد ٤ ثواني سكوت. */
+let TYPT=0; const TYPERS=new Map();
+function chatTyping(){
+  if(!isOnline()||!NET)return;
+  const now=Date.now(); if(now-TYPT<2500)return; TYPT=now;
+  if(isHost())broadcast({t:"typing",cid:CID,name:NET.me}); else trToHost({t:"typing"});
+}
+function showTyping(cid,name){
+  TYPERS.set(cid,{name,until:Date.now()+4000});
+  renderTyping(); setTimeout(renderTyping,4100);
+}
+function typingDone(name){ for(const [k,v] of TYPERS) if(v.name===name) TYPERS.delete(k); renderTyping(); }
+function renderTyping(){
+  const now=Date.now(), names=[];
+  for(const [k,v] of TYPERS){ if(v.until<now)TYPERS.delete(k); else names.push(v.name); }
+  const el=$("chatTyping");
+  if(el) el.textContent = !names.length ? ""
+    : names.length===1 ? `${names[0]} يكتب…`
+    : names.length===2 ? `${names[0]} و${names[1]} يكتبون…` : `${names.length} يكتبون…`;
+  const fb=$("chatFab"); if(fb) fb.classList.toggle("typing", names.length>0 && !chatVisible());
+}
+
 function chatPush(name,text){
   if(!NET)return;
+  typingDone(name);
   NET.chat=NET.chat||[];
   NET.chat.push({name,text:String(text).slice(0,160)});   // الأحدث تحت زي أي شات
   if(NET.chat.length>40)NET.chat.shift();
@@ -2168,6 +2362,8 @@ function hostOnMsg(topic,d){
   }
   else if(d.t==="act"){ const r=findCid(cid); if(r&&r.role==="player")applyAct(r.seat,d.type,d.payload); }
   else if(d.t==="chat"){ const r=findCid(cid); chatPush(r?r.name:"لاعب",d.text); }
+  else if(d.t==="typing"){ const r=findCid(cid); if(!r)return;
+    broadcast({t:"typing",cid,name:r.name}); showTyping(cid,r.name); }
   else if(d.t==="ping"){ const r=findCid(cid); if(r)r.online=true; }
 }
 /* لو صاحب الدور منقطع، نتصرّف عنه بعد مهلة عشان الجولة ما تتعلّق */
@@ -2233,14 +2429,22 @@ function guestOnMsg(topic,d){
   if(d.t==="welcome"){ clearInterval(NET._poke); NET.seat=d.seat; NET.role=d.role; lobbyGuest(); }
   else if(d.t==="roster"){ NET.lobby=d; if(!S||!S.phase)lobbyGuest(); if(S)render(); }
   else if(d.t==="chat"){
+      const last=(d.list||[])[(d.list||[]).length-1]; if(last)typingDone(last.name);
       const grew=(d.list||[]).length>((NET.chat||[]).length);
       NET.chat=d.list||[];
       if(grew && !chatVisible())sfx("msg");
       renderChat();
     }
-  else if(d.t==="state"){ ovHide(); applyState(d.s); NET.lastState=d.s; saveRoom(); }
+  else if(d.t==="state"){
+      const st=d.s;
+      if(OVK==="lobby"||OVK==="wait")ovHide();            // بدأ اللعب أو رجع المضيف
+      if(OVK==="reveal"&&st.phase!=="done")ovHide();      // الجولة الجاية بدأت فعلاً
+      applyState(st); NET.lastState=st; saveRoom();
+      if(st.phase==="done"&&st.rev)showRev(st.rev);       // لو ضاعت رسالة الكشف
+    }
   else if(d.t==="kicked"){ endedByHost("انطردت من الغرفة","المضيف طلّعك من الجلسة.",false); }
-  else if(d.t==="reveal"){ revealSheet(d.shown,d.winners,d.over); }
+  else if(d.t==="reveal"){ showRev(d); }
+  else if(d.t==="typing"){ if(d.cid!==CID)showTyping(d.cid,d.name); }
   else if(d.t==="over"){ S&&(S.phase="over"); endScreen(d.win,d.standings,d.why,d.party); }
   else if(d.t==="hostleft"){ hostGone(); }
   else if(d.t==="closed"){ endedByHost("المضيف أنهى الجلسة","الغرفة انتهت بإرادة المضيف.",true); }
@@ -2274,7 +2478,7 @@ function hostGone(){
   ovShow(`<div class="hero sm"><h2>المضيف طلع</h2>
     <p>نحاول نكمّل الجلسة بدونه. أرصدتكم محفوظة، والجولة الحالية تُلغى ونبدأ جولة جديدة.</p></div>
     <div class="conn" id="netConn">${rank===0?"انت اللي بتستلم…":"لحظات…"}</div>
-    <div class="ctl" style="margin-top:14px"><button class="act b-quiet" onclick="leaveRoom()">اخرج</button></div>`);
+    <div class="ctl" style="margin-top:14px"><button class="act b-quiet" onclick="leaveRoom()">اخرج</button></div>`,"wait");
   setTimeout(()=>takeOver(),1000+rank*2500);
 }
 function takeOver(){
@@ -2387,7 +2591,7 @@ function lobbyGuest(){
    <div class="ctl" style="margin-top:14px">
      <button class="act b-brass lobbychat" onclick="chatOpen(true)">💬 الدردشة
        <span class="cf-b" id="chatBadge2" hidden>0</span></button>
-   <button class="act b-quiet" onclick="leaveRoom()">اخرج من الغرفة</button></div>`);
+   <button class="act b-quiet" onclick="leaveRoom()">اخرج من الغرفة</button></div>`,"lobby");
 }
 function startOnline(){
   const ps=players_();
@@ -2460,6 +2664,7 @@ function copyLink(btn,link){
 $("gateBtn").addEventListener("click",()=>{S.gate=false;render();});
 $("chatSend").addEventListener("click",chatSend);
 $("chatIn").addEventListener("keydown",e=>{if(e.key==="Enter")chatSend();});
+$("chatIn").addEventListener("input",chatTyping);
 volIcon();
 $("bMute").addEventListener("click",toggleMute);
 $("bRules").addEventListener("click",rules);
