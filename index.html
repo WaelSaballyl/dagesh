@@ -931,6 +931,7 @@ function strength(p,opp){const s=probs(p).single;return{single:s,win:Math.pow(s,
 /* ---- الجلسة ---- */
 const GOAL=1000000;          // هدف الفوز ثابت
 function newSession(n,mode,diff,names){
+  LOCALCHAT=[];
   buildRanks(n);
   S={n,mode,diff,dealer:(Math.random()*n)|0,pot:0,boss:-1,phase:"",turn:0,order:[],
      goal:GOAL,
@@ -1267,7 +1268,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260913-1413";
+const BUILD="20260913-1422";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1311,7 +1312,9 @@ let VOLI=(()=>{ try{ const v=localStorage.getItem("dagesh-vol");
 let MUTED=VOLS[VOLI].g===0;
 
 function ac(){ if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
-  if(AC&&AC.state==="suspended")AC.resume(); return AC; }
+  /* "interrupted" تصير في الآيفون بعد مكالمة أو لما تطلع من المتصفح وترجع */
+  if(AC&&AC.state!=="running"&&AC.state!=="closed"){ try{AC.resume()}catch(e){} }
+  return AC; }
 
 /* كل الأصوات تمر من هنا. قصّة خفيفة من فوق تشيل الفحيح، ومن تحت
    تشيل الطنين — والباقي يوصل زي ما هو لأن التسجيلات نظيفة وموحّدة. */
@@ -1341,9 +1344,24 @@ function sfxLoad(){
       .then(x=>{BUF[n]=x;}).catch(()=>{});
   });
 }
-/* المتصفح ما يسمح بصوت قبل أول لمسة — نجهّز عندها */
-["pointerdown","touchstart","keydown"].forEach(ev=>
-  addEventListener(ev,()=>{ac();sfxLoad();},{once:true,passive:true}));
+/* المتصفح ما يسمح بصوت قبل ما يلمس اللاعب الشاشة.
+   الآيفون بالذات ما يعتبر "بداية اللمسة" إذن — لازم رفع الإصبع أو ضغطة كاملة،
+   وقبل كنا نحاول مرة وحدة بس على بداية اللمسة فيظل الصوت مقفول للأبد.
+   والضيف بالذات ما كان ينفتح له أبداً لأن ضغطاته تروح للمضيف وما يطلع
+   عنده صوت داخل الضغطة نفسها. الحين نحاول مع كل ضغطة لين يشتغل. */
+function unlockAudio(){
+  const c=ac(); if(!c)return;
+  sfxLoad();
+  if(c.state==="running")return;
+  try{ c.resume(); }catch(e){}
+  try{                                    // صوت صامت طوله عيّنة وحدة — هذا اللي يفتح الصوت فعلاً في iOS
+    const b=c.createBuffer(1,1,22050), src=c.createBufferSource();
+    src.buffer=b; src.connect(c.destination); src.start(0);
+  }catch(e){}
+}
+["touchend","click","keydown","pointerup"].forEach(ev=>addEventListener(ev,unlockAudio,{capture:true,passive:true}));
+addEventListener("pointerdown",()=>sfxLoad(),{once:true,passive:true});     // نبدأ التحميل بدري
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&AC&&AC.state!=="running"){try{AC.resume()}catch(e){}} });
 
 const pickOne=a=>a[(Math.random()*a.length)|0];
 const vary=()=>0.94+Math.random()*0.13;          // فرق بسيط بالنبرة عشان ما تتكرر نفس الصوت
@@ -1381,8 +1399,11 @@ function sfx(kind){
       case "chip":   sChip(0); break;
       case "fold":   play(pickOne(["fold1","fold2"]),.5,0,vary()); break;
       case "turn":   play("turn",.42); break;
-      case "dagesh": sCard(1,0); sCard(1,.09); sCard(1,.18);
-                     play("chipsHit",.6,.3); break;
+      /* داقش: ضربة ورق وحدة واضحة على الطاولة، وبعدها الورق ينقلب.
+         قبل كانت ثلاث ورقات عشوائية ورا بعض — وبعضها مو ضربة وحدة بل
+         خشخشة فيها ٤-٥ طقّات، فتتراكب وتطلع صوت غريب */
+      case "dagesh": play("fold1",.85);
+                     play("fan",.5,.12); break;
       /* الفوز بالجولة: الفلوس تنسحب لك — بدون أي نغمة */
       case "win":    play(pickOne(["win","win2"]),.7);
                      play("chipsWin",.5,.28); break;
@@ -1808,8 +1829,8 @@ function render(){
   autoIfOffline();
   chatSync();
   $("rosterSec").hidden=!isOnline();
+  renderChat();
   if(isOnline()){
-    renderChat();
     const d=isHost()?rosterMsg():(NET.lobby||{players:[],specs:[]});
     $("rosterBox").innerHTML=rosterRows(d.players||[],d.specs||[],isHost());
   }
@@ -2568,8 +2589,15 @@ function chatPush(name,text){
   seatBubble(name,text);
 }
 function chatSend(){
-  const el=$("chatIn"); if(!el||!NET)return;
+  const el=$("chatIn"); if(!el)return;
   const t=(el.value||"").trim(); if(!t)return;
+  if(!isOnline()){                           // ضد البوتات: تنحفظ عندك وتطلع فوق مقعدك
+    el.value="";
+    LOCALCHAT.push({name:myChatName(),text:t.slice(0,160),id:LOCALCHAT.length+1});
+    if(LOCALCHAT.length>40)LOCALCHAT.shift();
+    renderChat(); seatBubble(myChatName(),t); el.focus(); return;
+  }
+  if(!NET)return;
   el.value="";
   if(isHost())chatPush(NET.me,t);
   else{ trToHost({t:"chat",text:t});
@@ -2577,7 +2605,11 @@ function chatSend(){
         renderChat(); seatBubble(NET.me,t); }   // نوريها له على طول بدل ما ينتظر ردّة المضيف
   el.focus();
 }
-let CHATSEEN=0;
+let CHATSEEN=0, LOCALCHAT=[];
+/* ضد البوتات أو تمرير الجوال ما فيه غرفة، فالرسائل تنحفظ هنا على جهازك */
+const chatList=()=> (isOnline()&&NET) ? (NET.chat||[]) : LOCALCHAT;
+const myChatName=()=> (isOnline()&&NET) ? NET.me
+  : (S&&S.players&&S.players[S.viewer] ? S.players[S.viewer].name : "أنت");
 function chatVisible(){ return !$("chatPanel").hidden; }
 /* الزر العائم يبين في أي غرفة — في الانتظار وفي اللعب */
 /* على الشاشات العريضة وقت اللعب، الدردشة تنلصق في العمود الجانبي
@@ -2589,7 +2621,7 @@ function layoutChat(){
   if(want){
     if(pn.parentNode!==dock)dock.appendChild(pn);
     pn.classList.add("docked"); pn.hidden=false; dock.hidden=false;
-    dock.classList.toggle("solo",!isOnline());          // ضد البوتات: ملاحظة صغيرة بس
+    dock.classList.remove("solo");
     renderChat();
   }else{
     if(pn.parentNode===dock){ document.body.appendChild(pn); pn.hidden=true; }
@@ -2601,11 +2633,10 @@ function chatSync(){
   /* يبين في أي جلسة — حتى مع البوتات — وإلا يظن اللاعب إن الدردشة انشالت.
      داخل اللوح نوضّح إنها تشتغل مع الأصحاب بس. */
   $("chatFab").hidden = !(isOnline() || (S && S.phase));
-  if(!isOnline())CHATSEEN=0;
   chatBadge();
 }
 function chatBadge(){
-  const n=Math.max(0,((NET&&NET.chat)?NET.chat.length:0)-CHATSEEN);
+  const n=Math.max(0,chatList().length-CHATSEEN);
   const hide = chatVisible() || n<=0, txt = n>9?"9+":String(n);
   for(const id of ["chatBadge","chatBadge2"]){        // الشريط العلوي وشاشة الغرفة
     const b=$(id); if(!b)continue;
@@ -2616,7 +2647,7 @@ function chatOpen(v){
   const pn=$("chatPanel"); if(!pn)return;
   pn.hidden=!v;
   if(v){
-    CHATSEEN=(NET&&NET.chat)?NET.chat.length:0;
+    CHATSEEN=chatList().length;
     renderChat();
     const box=$("chatBox"); box.scrollTop=box.scrollHeight;
     setTimeout(()=>{ const el=$("chatIn"); el&&el.focus(); },60);
@@ -2626,22 +2657,18 @@ function chatOpen(v){
 function renderChat(){
   const box=$("chatBox"); if(!box)return;
   const row=$("chatRow");
-  if(!isOnline()){                      // بوتات أو تمرير الجوال — ما فيه أحد نكلّمه
-    if(row)row.hidden=true;
-    box.innerHTML=`<p class="empty">الدردشة تشتغل لما تلعب <b>مع أصحابك</b> في غرفة.<br>
-      هنا انت ضد بوتات — ما فيه أحد تكلّمه.</p>`;
-    chatBadge(); return;
-  }
   if(row)row.hidden=false;
-  const list=(NET&&NET.chat)||[];
+  const list=chatList(), me=myChatName();
   if(!list.length){
-    box.innerHTML=`<p class="empty">ما فيه رسائل بعد.<br>اكتب شي لأصحابك.</p>`;
+    box.innerHTML = isOnline()
+      ? `<p class="empty">ما فيه رسائل بعد.<br>اكتب شي لأصحابك.</p>`
+      : `<p class="empty">اكتب اللي تبي وجرّب الدردشة.<br>البوتات ما يردّون — بس رسالتك تطلع فوق مقعدك.</p>`;
   }else{
     /* لو كان اللاعب طالع فوق يقرأ القديم ما نزعجه، وإلا ننزل لآخر رسالة */
     const stick = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
     const Li=leaderI(), ln=Li>=0?S.players[Li].name:null;       // الأعلى رصيد ياخذ تاج في الدردشة كمان
     box.innerHTML=list.map(m=>
-      `<p class="${NET&&m.name===NET.me?"mine":""}"><b>${m.name===ln?'<span class="crown-c" title="الأعلى رصيد">👑</span>':""}${esc(m.name)}</b> ${esc(m.text)}</p>`).join("");
+      `<p class="${m.name===me?"mine":""}"><b>${m.name===ln?'<span class="crown-c" title="الأعلى رصيد">👑</span>':""}${esc(m.name)}</b> ${esc(m.text)}</p>`).join("");
     if(stick)box.scrollTop=box.scrollHeight;
   }
   if(chatVisible())CHATSEEN=list.length;
