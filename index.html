@@ -748,10 +748,88 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
   .sheet[data-k="setup"]{max-width:760px}
 }
 
+/* ===== صفحة الترحيب — أول شي يشوفه اللي يفتح الموقع ===== */
+.welcome{position:fixed;inset:0;z-index:50;display:flex;overflow-y:auto;overscroll-behavior:contain;
+  background:radial-gradient(90% 70% at 50% 30%,#18241F 0%,var(--felt) 50%,var(--paper) 100%);
+  transition:opacity .35s ease,visibility .35s}
+.welcome[hidden]{display:none}
+.welcome.out{opacity:0;visibility:hidden;pointer-events:none}
+.wl-in{margin:auto;width:100%;max-width:1000px;display:flex;flex-direction:column;align-items:center;
+  gap:22px;text-align:center;
+  padding:max(26px,env(safe-area-inset-top)) 20px max(26px,env(safe-area-inset-bottom))}
+.wl-fan{position:relative;flex:none;width:250px;height:178px;
+  animation:wlFloat 5s ease-in-out 1s infinite alternate}
+.wl-fan .card{position:absolute;left:50%;bottom:0;width:96px;height:134px;margin-left:-48px;
+  border-radius:8px;transform-origin:50% 135%;transform:rotate(var(--a));
+  box-shadow:0 12px 30px rgba(0,0,0,.55);
+  animation:wlDeal .65s cubic-bezier(.2,.9,.3,1.12) backwards;animation-delay:calc(var(--i)*110ms + 120ms)}
+@keyframes wlDeal{from{transform:translateY(90px) rotate(0);opacity:0}}
+@keyframes wlFloat{to{transform:translateY(-7px)}}
+.wl-txt{display:flex;flex-direction:column;align-items:center;width:100%;max-width:440px}
+.wl-title{font-family:"Alexandria",sans-serif;font-weight:800;line-height:1;letter-spacing:-.04em;
+  font-size:clamp(52px,14vw,92px);margin:0}
+.wl-tag{font-size:clamp(15px,4vw,19px);color:var(--ink-2);margin:10px 0 0}
+.wl-pts{list-style:none;padding:0;margin:22px 0 0;display:grid;gap:8px;width:100%;text-align:start}
+.wl-pts li{display:grid;grid-template-columns:30px 1fr;column-gap:10px;align-items:center;
+  padding:10px 14px;border:1px solid var(--rule-2);border-radius:12px;background:rgba(12,15,17,.5)}
+.wl-pts i{grid-row:span 2;font-style:normal;font-size:22px;line-height:1;text-align:center;color:var(--ink-2)}
+.wl-pts i.r{color:var(--accent)}
+.wl-pts b{font-family:"Alexandria",sans-serif;font-weight:600;font-size:14.5px;color:var(--ink)}
+.wl-pts span{font-size:12.5px;color:var(--ink-2);line-height:1.45}
+.wl-cta{display:flex;flex-direction:column;gap:9px;margin-top:22px;width:100%}
+.wl-cta button.act{width:100%;flex:none;padding:15px 18px;font-size:15.5px}
+.wl-cta .wl-play{font-family:"Alexandria",sans-serif;font-weight:800;font-size:18px;padding:16px 18px}
+.wl-foot{font-size:11.5px;color:var(--ink-3);margin:14px 0 0}
+/* جوالات قصيرة: نصغّر الورق عشان كل شي يبان بدون سحب */
+@media (max-height:720px){
+  .wl-in{gap:14px}
+  .wl-fan{width:210px;height:140px}
+  .wl-fan .card{width:76px;height:106px;margin-left:-38px}
+  .wl-title{font-size:clamp(46px,12vw,64px)}
+  .wl-pts{margin-top:16px;gap:6px}
+  .wl-pts li{padding:8px 12px}
+  .wl-cta{margin-top:16px}
+}
+/* اللابتوب: الكلام يمين والورق يسار */
+@media (min-width:900px) and (orientation:landscape){
+  .wl-in{flex-direction:row-reverse;justify-content:center;gap:clamp(40px,7vw,110px);text-align:start}
+  .wl-fan{width:400px;height:300px}
+  .wl-fan .card{width:150px;height:210px;margin-left:-75px;border-radius:11px}
+  .wl-txt{align-items:flex-start}
+  .wl-cta{flex-direction:row}
+  .wl-cta .wl-play{flex:1.4}
+  .wl-cta button.act{width:auto;flex:1}
+}
+@media (min-width:900px) and (orientation:landscape) and (max-height:720px){
+  .wl-fan{width:330px;height:240px}
+  .wl-fan .card{width:120px;height:168px;margin-left:-60px}
+}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
+
+<!-- صفحة الترحيب: تطلع أول ما يفتح الموقع، وتختفي لما يضغط "يالله نلعب" -->
+<div class="welcome" id="welcome">
+  <div class="wl-in">
+    <div class="wl-fan" id="wlFan" aria-hidden="true"></div>
+    <div class="wl-txt">
+      <div class="wl-title">داقش</div>
+      <p class="wl-tag">ورق، مساومة، وبلوف.</p>
+      <ul class="wl-pts">
+        <li><i>♠</i><b>العب مع أصحابك</b><span>كل واحد من جواله أو لابتوبه، برمز غرفة</span></li>
+        <li><i class="r">♥</i><b>المساومة أهم من الورق</b><span>أغلب الجولات تنحسم بالتقسيم بدون ما تنكشف ولا ورقة</span></li>
+        <li><i>♣</i><b>أول واحد يوصل مليون</b><span>يفوز باللعبة</span></li>
+      </ul>
+      <div class="wl-cta">
+        <button class="act b-brass wl-play" id="wlPlay">يالله نلعب</button>
+        <button class="act b-quiet" id="wlRules">كيف تلعب؟</button>
+      </div>
+      <p class="wl-foot">مجانية، بدون تسجيل وبدون تحميل.</p>
+    </div>
+  </div>
+</div>
 
 <div class="app" id="app">
   <header class="bar">
@@ -1268,7 +1346,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260913-2229";
+const BUILD="20260913-2235";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -3065,7 +3143,26 @@ $("bNew").addEventListener("click",()=>{
       ${isHost()?`<button class="act b-pom" onclick="leaveRoom()">أنهِ الجلسة للكل</button>`:""}
     </div>`);
 });
+/* صفحة الترحيب — تطلع مرة وحدة لما يفتح الموقع.
+   رابط دعوة (?room=) يتخطاها ويوديك لخانة الدخول على طول. */
+function welcome(){
+  const w=$("welcome");
+  const q=new URLSearchParams(location.search).get("room");
+  if(q&&/^\d{5}$/.test(q)){ w.hidden=true; return; }
+  // أقوى أربع ورقات: ولد، بنت، شايب، أكه (الأكه فوق)
+  const fan=[["J","♣",-27],["Q","♦",-9],["K","♠",9],["A","♥",27]];
+  $("wlFan").innerHTML=fan.map(([r,s,a],i)=>
+    cardEl({r,s},false).replace('<div class="card',`<div style="--i:${i};--a:${a}deg" class="card`)).join("");
+  const close=then=>{
+    w.classList.add("out");
+    setTimeout(()=>{ w.hidden=true; w.classList.remove("out"); },380);
+    if(then)then();
+  };
+  $("wlPlay").addEventListener("click",()=>close(()=>sfx("card")));
+  $("wlRules").addEventListener("click",()=>close(rules));
+}
 setup();
+welcome();
 </script>
 </body>
 </html>
