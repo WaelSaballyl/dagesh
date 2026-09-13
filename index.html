@@ -1268,7 +1268,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260913-1422";
+const BUILD="20260913-2229";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1300,7 +1300,7 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden)checkUpda
 const SFXDIR="sfx/";
 const SFXFILES=["card1","card2","card3","card4","slide1","slide2","slide3","slide4",
   "fold1","fold2","shuffle","fan","chip1","chip2","chip3","chipsWin","chipsHit",
-  "boom1","boom2","boomLow","win","win2","lose","party","turn","rocket"];
+  "boom1","boom2","boomLow","win","win2","lose","party","turn"];
 let AC=null, BUF=Object.create(null), SFXASKED=0, MG=null;
 
 /* ثلاث درجات: هادي (الافتراضي)، عادي، صامت */
@@ -1409,7 +1409,6 @@ function sfx(kind){
                      play("chipsWin",.5,.28); break;
       case "lose":   play("lose",.5); break;
       case "msg":    play("turn",.28,0,1.2); break;
-      case "rocket": play("rocket",.45,0,.95+Math.random()*.12); break;
       case "boom":   play(pickOne(["boom1","boom2","boomLow"]),.6,0,vary()); break;
       /* المليون: تصفيق وهتاف حقيقي */
       case "party":  play("party",.85); break;
@@ -1443,7 +1442,7 @@ function fireworks(ms){
     const x=innerWidth*(0.15+Math.random()*0.7);
     R.push({x,y:innerHeight+10,vy:-(7+Math.random()*4),
             ty:innerHeight*(0.18+Math.random()*0.32),col:COL[(Math.random()*COL.length)|0]});
-    sfx("rocket");
+    /* الصاروخ يطلع بصمت — صوت الطلعة كان صفير غريب، والانفجار بس اللي له صوت */
   };
   const burst=(x,y,col)=>{
     sfx("boom");
