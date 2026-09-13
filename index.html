@@ -580,11 +580,64 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
 .ring.dense .seat .nm{font-size:10.5px}
 .ring.dense .seat .chipbal{font-size:9px}
 .ring.dense .seat .betchip{font-size:12px}
-.ring.dense .seat .betchip:not(.on){display:none}
 .ring.dense .seat .badge{font-size:8px;padding:1px 4px}
 .ring.dense .seat .mini .card.sm{width:13px;height:19px}
 .ring.dense .ava .crown-i{top:-12px;font-size:12px}
 @media(max-width:520px){ .ring.tight{aspect-ratio:1/1.4} }
+
+/* فقاعات الدردشة فوق المقاعد */
+.bubbles{position:absolute;inset:0;pointer-events:none;z-index:8}
+.bubble{position:absolute;max-width:180px;width:max-content;
+  background:#F4F1EA;color:#15181A;font-size:12.5px;font-weight:600;line-height:1.45;
+  padding:6px 11px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.5);
+  overflow-wrap:anywhere}
+.bubble.fresh{animation:bubIn .22s ease both}
+.bubble.up{transform:translate(-50%,-100%)}
+.bubble.dn{transform:translate(-50%,0)}
+.bubble::after{content:"";position:absolute;left:50%;width:10px;height:10px;background:inherit;
+  transform:translateX(-50%) rotate(45deg);border-radius:2px}
+.bubble.up::after{bottom:-4px}
+.bubble.dn::after{top:-4px}
+.bubble.dots{display:flex;gap:4px;padding:8px 11px}
+.bubble.dots i{width:6px;height:6px;border-radius:50%;background:#6D7578;display:block;
+  animation:dotB 1s ease-in-out infinite}
+.bubble.dots i:nth-child(2){animation-delay:.15s}.bubble.dots i:nth-child(3){animation-delay:.3s}
+@keyframes dotB{50%{transform:translateY(-3px);opacity:.45}}
+@keyframes bubIn{from{opacity:0}}
+.crown-c{font-size:12px;margin-inline-end:3px}
+.ctl .wrapfull{flex:0 0 100%}
+
+/* ================= الجوال والشاشات الضيقة =================
+   الطاولة وورقك وأزرارك في شاشة وحدة: الشريط ما عاد يطفو فوق الطاولة
+   ويغطي مقعدك. والسجل تحت لو نزلت. */
+@media not all and (min-width:900px) and (orientation:landscape){
+  html{overflow-x:clip}                     /* احتياط: ما نبي الصفحة تتحرك يمين ويسار أبداً */
+  .app{padding:0 12px 24px}
+  .bar{height:58px;padding:0;gap:8px}
+  .bar h1{font-size:23px}
+  .bar .sub{display:none}
+  .bar nav{gap:5px;margin-inline-start:auto}
+  .tbtn{padding:6px 9px;font-size:11.5px;white-space:nowrap}
+  .chatbtn{padding:5px 9px;font-size:14px}
+  .board{height:calc(100vh - 58px);height:calc(100dvh - 58px);min-height:520px;
+         display:flex;flex-direction:column;padding-top:4px}
+  .btop{flex:none}
+  .stage{display:none}                      /* اسم المرحلة مكتوب وسط الطاولة */
+  #turnbar{padding:8px 0;margin:0;border-bottom:0}
+  #turnbar b{font-size:19px}
+  .table-wrap{flex:1;min-height:0;container-type:size;display:grid;place-items:center}
+  .ring{margin:0;max-width:none;aspect-ratio:.92/1;width:100%;width:min(100cqw,92cqh)}
+  .ring.tight{aspect-ratio:.82/1;width:100%;width:min(100cqw,82cqh)}
+  .felt{inset:12% 9%}
+  .dock{position:static;flex:none;background:transparent;border-top:1px solid var(--rule);
+        box-shadow:none;z-index:auto}
+  .dock-in{padding:9px 0 calc(8px + env(safe-area-inset-bottom));gap:9px}
+  .myrow{padding-bottom:9px}
+  .myrow .hand .card{width:48px;height:69px}
+  #actions{max-height:46vh;max-height:46dvh;overflow-y:auto}
+  .rail{margin-top:0;padding-top:16px}
+  .bubble{max-width:150px;font-size:12px}
+}
 
 /* ================= اللابتوب والشاشات العريضة =================
    كل شي يدخل في شاشة وحدة بدون تمرير: الطاولة بالعرض، ورقك وأزرارك
@@ -604,7 +657,9 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
   #rosterSec{flex:0 0 auto;max-height:30%;overflow-y:auto}
   .logsec{flex:1 1 0;min-height:90px;display:flex;flex-direction:column}
   .logsec .logbox{max-height:none;flex:1;min-height:0}
-  .chatdock{flex:0 0 46%;min-height:0;display:flex;flex-direction:column}
+  .chatdock{flex:0 0 50%;min-height:0;display:flex;flex-direction:column}
+  .chatdock.solo{flex:0 0 auto}
+  .chatdock.solo .chatbox{min-height:0;padding:10px}
   .chatdock[hidden]{display:none}
   .chatpanel.docked{position:static;inset:auto;max-width:none;margin:0;padding:0;border:0;
     border-radius:0;box-shadow:none;background:transparent;animation:none;
@@ -625,9 +680,9 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
 
   /* الطاولة تاخذ كل المساحة الباقية وتكبر وتصغر معها */
   .table-wrap{flex:1;min-height:0;container-type:size;display:grid;place-items:center;padding:8px 0}
-  .ring{max-width:none;margin:0;aspect-ratio:1.85/1;
-        width:min(100%,calc((100dvh - 330px)*1.85));   /* احتياط للمتصفحات القديمة */
-        width:min(100cqw,185cqh)}
+  .ring{max-width:none;margin:0;aspect-ratio:1.55/1;
+        width:min(100%,calc((100dvh - 330px)*1.55),1000px);   /* احتياط للمتصفحات القديمة */
+        width:min(100cqw,155cqh,1000px)}
   .felt{inset:12% 8.5%}
   .felt::after{content:"داقش";position:absolute;left:50%;top:74%;transform:translate(-50%,-50%);
     font:800 clamp(16px,3.4cqh,38px) "Alexandria",sans-serif;color:rgba(255,255,255,.06);
@@ -659,7 +714,8 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
     background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.1);
     font-family:"Alexandria",sans-serif;font-weight:800;font-size:13px;color:#fff;
     white-space:nowrap;direction:ltr;font-variant-numeric:tabular-nums;
-    animation:betIn .35s cubic-bezier(.3,1.4,.5,1) backwards}
+  }
+  .betspot.new{animation:betIn .35s cubic-bezier(.3,1.4,.5,1) backwards}
   .betspot i{width:18px;height:18px;border-radius:50%;flex:none;
     background:radial-gradient(circle,#F4D58A 0 33%,#C8962F 34% 57%,#F4D58A 58% 64%,#B8861F 65%);
     box-shadow:0 1px 3px rgba(0,0,0,.6)}
@@ -680,6 +736,9 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
   .myrow .hand .card{width:70px;height:100px;border-radius:6px}
   .mymeta .project{font-size:17px}
   #actions{min-width:0;max-height:38vh;overflow-y:auto;display:flex;flex-direction:column;gap:9px}
+  #actions .ctl{justify-content:flex-start}
+  #actions .ctl>button.act{flex:0 1 auto;min-width:150px;padding:12px 24px}
+  #actions .ctl .wrapfull{flex:0 1 auto}
   #actions .ctl:has(.amt){flex-wrap:nowrap}
   #actions .ctl .amt{width:auto;flex:1 1 300px}
   #actions .ctl:has(.amt)>button.act{flex:0 0 auto;min-width:130px}
@@ -741,6 +800,7 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
           </div>
           <div class="seats" id="seats"></div>
           <div class="dgsplash" id="dgsplash" hidden></div>
+          <div class="bubbles" id="bubbles"></div>
         </div>
       </div>
 
@@ -1207,7 +1267,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260913-1348";
+const BUILD="20260913-1413";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1595,11 +1655,12 @@ const _fit={};
 function fitSeats(ringEl,key){
   if(_fit[key]!=null){ ringEl.style.setProperty("--ss",_fit[key]); return; }
   const seats=[...ringEl.querySelectorAll(".seat")];
+  const box=(ringEl.parentElement||ringEl).getBoundingClientRect();
   ringEl.classList.add("fitting");
   let sc=1; ringEl.style.setProperty("--ss",1);
   for(let k=0;k<8;k++){
     const r=seats.map(e=>e.getBoundingClientRect());
-    let bad=false;
+    let bad=r.some(q=>q.top<box.top-3||q.bottom>box.bottom||q.left<box.left-3||q.right>box.right+3);
     for(let i=0;i<r.length&&!bad;i++)for(let j=i+1;j<r.length;j++){
       const a=r[i],b=r[j];
       if(a.left<b.right+2&&b.left<a.right+2&&a.top<b.bottom+2&&b.top<a.bottom+2){bad=true;break;}   // نبي فراغ 2px على الأقل
@@ -1609,6 +1670,62 @@ function fitSeats(ringEl,key){
   }
   ringEl.classList.remove("fitting");
   _fit[key]=sc;
+}
+/* الأعلى رصيد (بدون تعادل) — نفس القاعدة للتاج على الطاولة وفي الدردشة */
+function leaderI(){
+  if(!S||!S.players)return -1;
+  const al=S.players.filter(p=>!p.out).slice().sort((a,b)=>b.chips-a.chips);
+  return (al.length>1&&al[0].chips>al[1].chips)?al[0].i:-1;
+}
+/* الفيشة تنحط بعد حافة المقعد بشوي باتجاه القدر — قبل كانت بنسبة ثابتة
+   فتختفي ورا مقعدك لما تكون الطاولة عريضة */
+function placeBets(ringEl){
+  const rb=ringEl.getBoundingClientRect(), cx=rb.width/2, cy=rb.height/2;
+  for(const b of ringEl.querySelectorAll(".betspot")){
+    const st=ringEl.querySelector(`.seat[data-i="${b.dataset.i}"]`); if(!st)continue;
+    const r=st.getBoundingClientRect();
+    const sx=r.left-rb.left+r.width/2, sy=r.top-rb.top+r.height/2;
+    let dx=cx-sx, dy=cy-sy; const d=Math.hypot(dx,dy)||1; dx/=d; dy/=d;
+    const ext=(w,h)=>Math.min(Math.abs(dx)>1e-3?(w/2)/Math.abs(dx):1e9,
+                              Math.abs(dy)>1e-3?(h/2)/Math.abs(dy):1e9);
+    const t=ext(r.width,r.height), c=ext(b.offsetWidth,b.offsetHeight);   // offset* يتجاهل حركة التكبير
+    const off=Math.min(t+c+8, d*0.72);
+    b.style.left=(sx+dx*off)+"px"; b.style.top=(sy+dy*off)+"px";
+  }
+}
+/* فقاعة فوق مقعد اللي كتب — تبان ٤ ثواني ونص. ولو أحد يكتب تطلع "•••" */
+const BUBS=new Map(), _lastBet={};
+function seatBubble(name,text){
+  if(!S||!S.players)return;
+  const p=S.players.find(x=>x.name===name); if(!p)return;
+  BUBS.set(p.i,{text:String(text).slice(0,70),until:Date.now()+4500,born:Date.now()});
+  drawBubbles(); setTimeout(drawBubbles,4600);
+}
+function drawBubbles(){
+  const ring=$("ring"), box=$("bubbles"); if(!ring||!box)return;
+  if(!S||!S.players){ box.innerHTML=""; return; }
+  const now=Date.now(), rb=ring.getBoundingClientRect(), out=[], shown=new Set();
+  const put=(i,html,cls)=>{
+    const st=ring.querySelector(`.seat[data-i="${i}"]`); if(!st)return;
+    const r=st.getBoundingClientRect();
+    /* نمسكها داخل مساحة الطاولة كلها (مو داخل البيضاوي) عشان تبقى فوق صاحبها بالضبط */
+    const wb=(ring.parentElement||ring).getBoundingClientRect();
+    const x=Math.min(Math.max(r.left-rb.left+r.width/2, wb.left-rb.left+92), wb.right-rb.left-92);
+    const up=(r.top+r.height/2-rb.top)>rb.height*0.42;     // تحت → الفقاعة فوقه، فوق → تحته (دايم باتجاه الوسط)
+    const y=up?(r.top-rb.top-8):(r.bottom-rb.top+8);
+    out.push(`<div class="bubble ${up?"up":"dn"} ${cls||""}" style="left:${x}px;top:${y}px">${html}</div>`);
+    shown.add(i);
+  };
+  for(const [i,b] of BUBS){
+    if(b.until<now){BUBS.delete(i);continue;}
+    put(i,esc(b.text),now-b.born<350?"fresh":"");
+  }
+  for(const [,t] of TYPERS){
+    if(t.until<now)continue;
+    const p=S.players.find(x=>x.name===t.name);
+    if(p&&!shown.has(p.i))put(p.i,"<i></i><i></i><i></i>","dots");
+  }
+  box.innerHTML=out.join("");
 }
 /* لما يتغير شكل الطاولة (تكبير النافذة، تدوير الجوال) نعيد ترتيب المقاعد */
 let _rzA=0,_rzT=0;
@@ -1635,7 +1752,7 @@ function render(){
   const top2=S.players.filter(p=>!p.out).map(p=>p.chips).sort((a,b)=>b-a);
   const leadC=(top2.length>1&&top2[0]>top2[1])?top2[0]:null;
   const RW=ringEl.clientWidth||1, RH=ringEl.clientHeight||1;
-  const rxP=desk?43:(small?40:37), ryP=desk?36.5:(small?41:38);
+  const rxP=desk?43:(small?40:39), ryP=desk?37:(small?40:37);
   const pos=seatSpots(nn, RW, RH, rxP, ryP);
   /* كم مسافة لكل مقعد على محيط الطاولة؟ لو قليلة نصغّر المقاعد عشان ما تتراكب */
   const ea=rxP/100*RW, eb=ryP/100*RH;
@@ -1664,18 +1781,26 @@ function render(){
     </div>`);
     if(p.bet>0&&!p.out){                       // الفيش قدّامه باتجاه القدر (يبان على الشاشات العريضة)
       const k=.55;
-      html.push(`<div class="betspot ${S.boss===p.i?"boss":""}" style="left:${50+(x-50)*k}%;top:${50+(y-50)*k}%"><i></i>${fmt(p.bet)}</div>`);
+      const nb=_lastBet[p.i]!==p.bet;
+      html.push(`<div class="betspot ${S.boss===p.i?"boss":""} ${nb?"new":""}" data-i="${p.i}" style="left:${50+(x-50)*k}%;top:${50+(y-50)*k}%"><i></i>${fmt(p.bet)}</div>`);
     }
   }
   $("seats").innerHTML=html.join("");
+  for(const p of S.players)_lastBet[p.i]=p.bet;
   fitSeats(ringEl,[nn,RW,RH,desk,S.revealed.size,ringEl.classList.contains("dense")].join("|"));
+  if(desk)placeBets(ringEl);
+  drawBubbles();
 
   $("pot").textContent=fmt(Math.max(0,...S.players.map(p=>p.bet)));
   $("potLabel").textContent = S.phase==="betting" ? "أعلى مراهنة" : "التقسيمة";
   $("youName").textContent=S.mode==="bots"?"ورقك":`ورق ${v.name}`;
   $("myChips").textContent=(leadC!==null&&!v.out&&v.chips===leadC?"👑 ":"")+fmt(v.chips);
   document.querySelector(".myrow").style.display=isSpec()?"none":"";
-  $("hand").innerHTML=v.hand.map((c,i)=>`<div class="deal" style="animation-delay:${i*60}ms">${cardEl(c)}</div>`).join("");
+  const hk=[S.handNo,S.viewer,v.hand.map(c=>c.r+c.s).join()].join("|");
+  if($("hand").dataset.k!==hk){
+    $("hand").dataset.k=hk;
+    $("hand").innerHTML=v.hand.map((c,i)=>`<div class="deal" style="animation-delay:${i*60}ms">${cardEl(c)}</div>`).join("");
+  }
   $("proj").textContent=v.hand.length?pdetail(v.eval):"";
 
   $("log").innerHTML=S.log.map(l=>`<p class="${l.c||""}">${l.t}</p>`).join("");
@@ -1720,9 +1845,7 @@ function render(){
   const ph={betting:"الجزء الأول — الأكشن",mic:"الجزء الثاني — المناقشة",
             offer:"الجزء الثاني — المناقشة",showdown:"داقش — كشف الأوراق",
             done:"انتهت الجولة"}[S.phase]||"";
-  $("phase").textContent=S.boss>=0&&S.phase!=="betting"
-    ? `${ph} · المايك مع ${S.players[S.boss].name} (أعلى مراهنة ${fmt(S.players[S.boss].bet)})`
-    : ph;
+  $("phase").textContent=ph;
   // لوحة "فلان داقش!" وسط الطاولة
   const sp=$("dgsplash");
   if(sp){
@@ -1831,7 +1954,7 @@ function actions(){
     return H(`${S.players[S.boss].name} عارض عليك <b>${fmt(v.share)}</b>. لو وافقت تدخل محفظتك على طول. ولو داقشت وكسبت تاخذ مراهنتك <b>${fmt(v.bet)}</b>، ولو خسرت تروح عليك.`,
       `<button class="act b-brass" onclick="act('resp',{r:'ok'})">أوافق ${fmt(v.share)}</button>
        <button class="act b-quiet" onclick="act('resp',{r:'no'})">أبي أكثر</button>
-       <button class="act b-quiet" style="flex:0 0 100%" onclick="act('askout')">اطلب إذن الانسحاب</button>`);
+       <button class="act b-quiet wrapfull" onclick="act('askout')">اطلب إذن الانسحاب</button>`);
   }
   H(S.busy?"في انتظار بقية اللاعبين…":"…","");
 }
@@ -2429,17 +2552,20 @@ function renderTyping(){
     : names.length===1 ? `${names[0]} يكتب…`
     : names.length===2 ? `${names[0]} و${names[1]} يكتبون…` : `${names.length} يكتبون…`;
   const fb=$("chatFab"); if(fb) fb.classList.toggle("typing", names.length>0 && !chatVisible());
+  drawBubbles();
 }
 
 function chatPush(name,text){
   if(!NET)return;
   typingDone(name);
   NET.chat=NET.chat||[];
-  NET.chat.push({name,text:String(text).slice(0,160)});   // الأحدث تحت زي أي شات
+  NET.chatSeq=(NET.chatSeq||0)+1;
+  NET.chat.push({name,text:String(text).slice(0,160),id:NET.chatSeq});   // الأحدث تحت زي أي شات
   if(NET.chat.length>40)NET.chat.shift();
   if(isHost())broadcast({t:"chat",list:NET.chat});
   if(!chatVisible() && name!==(NET&&NET.me)) sfx("msg");
   renderChat();
+  seatBubble(name,text);
 }
 function chatSend(){
   const el=$("chatIn"); if(!el||!NET)return;
@@ -2448,7 +2574,7 @@ function chatSend(){
   if(isHost())chatPush(NET.me,t);
   else{ trToHost({t:"chat",text:t});
         NET.chat=(NET.chat||[]).concat([{name:NET.me,text:t.slice(0,160)}]);
-        renderChat(); }               // نوريها له على طول بدل ما ينتظر ردّة المضيف
+        renderChat(); seatBubble(NET.me,t); }   // نوريها له على طول بدل ما ينتظر ردّة المضيف
   el.focus();
 }
 let CHATSEEN=0;
@@ -2459,10 +2585,12 @@ function chatVisible(){ return !$("chatPanel").hidden; }
    لأن النافذة تغطي العمود الجانبي. */
 function layoutChat(){
   const pn=$("chatPanel"), dock=$("chatDock"); if(!pn||!dock)return;
-  const want=isDesk()&&isOnline()&&!!(S&&S.phase);
+  const want=isDesk()&&!!(S&&S.phase);
   if(want){
     if(pn.parentNode!==dock)dock.appendChild(pn);
     pn.classList.add("docked"); pn.hidden=false; dock.hidden=false;
+    dock.classList.toggle("solo",!isOnline());          // ضد البوتات: ملاحظة صغيرة بس
+    renderChat();
   }else{
     if(pn.parentNode===dock){ document.body.appendChild(pn); pn.hidden=true; }
     pn.classList.remove("docked"); dock.hidden=true;
@@ -2511,8 +2639,9 @@ function renderChat(){
   }else{
     /* لو كان اللاعب طالع فوق يقرأ القديم ما نزعجه، وإلا ننزل لآخر رسالة */
     const stick = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    const Li=leaderI(), ln=Li>=0?S.players[Li].name:null;       // الأعلى رصيد ياخذ تاج في الدردشة كمان
     box.innerHTML=list.map(m=>
-      `<p class="${NET&&m.name===NET.me?"mine":""}"><b>${esc(m.name)}</b> ${esc(m.text)}</p>`).join("");
+      `<p class="${NET&&m.name===NET.me?"mine":""}"><b>${m.name===ln?'<span class="crown-c" title="الأعلى رصيد">👑</span>':""}${esc(m.name)}</b> ${esc(m.text)}</p>`).join("");
     if(stick)box.scrollTop=box.scrollHeight;
   }
   if(chatVisible())CHATSEEN=list.length;
@@ -2659,6 +2788,10 @@ function guestOnMsg(topic,d){
   else if(d.t==="chat"){
       const last=(d.list||[])[(d.list||[]).length-1]; if(last)typingDone(last.name);
       const grew=(d.list||[]).length>((NET.chat||[]).length);
+      const L=d.list||[], maxId=L.reduce((a,m)=>Math.max(a,m.id||0),0);
+      if(NET.lastBub==null) NET.lastBub=maxId;            // أول ما ندخل: الرسائل القديمة بدون فقاعات
+      else{ for(const m of L) if((m.id||0)>NET.lastBub&&m.name!==NET.me) seatBubble(m.name,m.text);
+            NET.lastBub=Math.max(NET.lastBub,maxId); }
       NET.chat=d.list||[];
       if(grew && !chatVisible())sfx("msg");
       renderChat();
