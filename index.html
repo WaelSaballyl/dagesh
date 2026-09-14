@@ -1411,7 +1411,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260914-0712";
+const BUILD="20260914-0716";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -2037,7 +2037,7 @@ function render(){
 /* زر "اشرح لي": الشرح التفصيلي للمبتدئين، والخبير يشوف المهم بس */
 let HELP=(()=>{try{return localStorage.getItem("dagesh-help")==="1"}catch(e){return false}})();
 function toggleHelp(){ HELP=!HELP; try{localStorage.setItem("dagesh-help",HELP?"1":"0")}catch(e){} if(S)render(); }
-/* الجولة الجاية تبدأ لحالها — ٥ ثواني بعد الجولة العادية، و١٠ بعد الكشف عشان تلحقون تشوفون الورق.
+/* الجولة الجاية تبدأ لحالها — ثانيتين ونص بعد الجولة العادية، و٦ بعد الكشف عشان تلحقون تشوفون الورق.
    كل جهاز يعلن إنه جاهز لحاله، والمضيف يبدأ لما يجهز الكل (أو بعد ٢٥ ثانية لو أحد نايم) */
 let AUTO={k:"",at:0,ms:0};
 function autoNext(){
@@ -2045,7 +2045,7 @@ function autoNext(){
   const key=()=>(isOnline()?"on":"off")+":"+S.handNo;
   const k=key();
   if(AUTO.k!==k){
-    const ms=(S.rev&&S.rev.h===S.handNo)?10000:5000;
+    const ms=(S.rev&&S.rev.h===S.handNo)?6000:2500;   // وائل حس ٥ و١٠ ثواني طويلة
     AUTO={k,at:Date.now()+ms,ms};
     setTimeout(()=>{ if(AUTO.k===k&&S&&S.phase==="done"&&key()===k)act("next"); },ms);
   }
