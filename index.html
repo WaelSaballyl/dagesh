@@ -152,6 +152,18 @@ button{font:inherit;cursor:pointer}
   background:var(--accent);padding:10px 22px;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
 .dgsplash.go{animation:dgPop .55s cubic-bezier(.3,1.6,.4,1) both}
 @keyframes dgPop{from{transform:translate(-50%,-50%) scale(.3) rotate(-6deg);opacity:0}}
+/* "انتهت الجولة" ثم "الجولة ٤" وسط الطاولة — عشان يبان إن فيه جولة جديدة */
+.rndsplash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:6;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;white-space:nowrap;
+  background:rgba(8,12,11,.92);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:11px 28px;
+  box-shadow:0 12px 40px rgba(0,0,0,.6);font-family:"Alexandria",sans-serif}
+.rndsplash[hidden]{display:none}
+.rndsplash small{font-size:12px;font-weight:600;color:var(--ink-2)}
+.rndsplash b{font-size:26px;font-weight:800;color:#fff;line-height:1.2}
+.rndsplash.hold{animation:rsIn .3s cubic-bezier(.3,1.5,.5,1) both}
+.rndsplash.flash{animation:rsIn .3s cubic-bezier(.3,1.5,.5,1) both,rsOut .35s ease-in 1.9s forwards}
+@keyframes rsIn{from{transform:translate(-50%,-50%) scale(.6);opacity:0}}
+@keyframes rsOut{to{transform:translate(-50%,-50%) scale(.95);opacity:0}}
 .dgmark{font-style:normal;font-size:11px;font-weight:800;background:var(--accent);color:#fff;
   border-radius:99px;padding:2px 9px;margin-inline-start:6px;vertical-align:1px;white-space:nowrap}
 .rdy{font-size:11.5px;color:var(--ink-3);text-align:center;margin:12px 0 4px;min-height:1em}
@@ -938,6 +950,7 @@ select.pick option{background:#14181B;color:var(--ink)}
           </div>
           <div class="seats" id="seats"></div>
           <div class="dgsplash" id="dgsplash" hidden></div>
+          <div class="rndsplash" id="rndsplash" hidden></div>
           <div class="bubbles" id="bubbles"></div>
         </div>
       </div>
@@ -1070,6 +1083,7 @@ function strength(p,opp){const s=probs(p).single;return{single:s,win:Math.pow(s,
 const GOAL=1000000;          // هدف الفوز ثابت
 function newSession(n,mode,diff,names){
   LOCALCHAT=[]; AUTO.k=""; landingHide();
+  { const rs=$("rndsplash"); if(rs){ rs.dataset.k=""; rs.hidden=true; } }
   buildRanks(n);
   S={n,mode,diff,dealer:(Math.random()*n)|0,pot:0,boss:-1,phase:"",turn:0,order:[],
      goal:GOAL,
@@ -1406,7 +1420,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260914-0717";
+const BUILD="20260914-0725";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1993,7 +2007,7 @@ function render(){
     tb.className="turn dagesh";
     tb.innerHTML=`<b>${dw?((dw.i===S.viewer&&!isSpec())?"انت داقشت!":esc(dw.name)+" داقش!"):"داقش!"}</b><span>الكل يقلب ورقه</span>`;
   }else if(S.phase==="done"||S.phase==="over"){
-    tb.className="turn quiet"; tb.innerHTML=`<b>انتهت الجولة</b><span>الجولة الجاية تبدأ لحالها</span>`;
+    tb.className="turn quiet"; tb.innerHTML=`<b>انتهت الجولة</b><span>الجولة الجاية تبدأ الحين</span>`;
   }else if(t>=0){
     const p=S.players[t], mine=t===S.viewer;
     tb.className="turn"+(mine?" mine":"");
@@ -2019,6 +2033,22 @@ function render(){
         sp.classList.remove("go"); void sp.offsetWidth; sp.classList.add("go");
       }
     }else{ sp.hidden=true; sp.dataset.t=""; }
+  }
+  // "انتهت الجولة" وقت ما تخلص، وأول ما تبدأ اللي بعدها "الجولة N" ثانيتين وتختفي
+  const rs=$("rndsplash");
+  if(rs){
+    const k = (sp&&!sp.hidden) ? ""
+            : S.phase==="done" ? "end"+S.handNo
+            : S.phase==="betting" ? "new"+S.handNo : "";
+    if(k.startsWith("end")){
+      if(rs.dataset.k!==k){ rs.dataset.k=k; rs.innerHTML=`<b>انتهت الجولة</b>`;
+        rs.className="rndsplash hold"; rs.hidden=false; }
+    }else if(k.startsWith("new")){
+      if(rs.dataset.k!==k){ rs.dataset.k=k;
+        rs.innerHTML=`${S.handNo>1?"<small>انتهت الجولة</small>":""}<b>الجولة ${S.handNo}</b>`;
+        rs.className="rndsplash"; void rs.offsetWidth; rs.className="rndsplash flash"; rs.hidden=false;
+        setTimeout(()=>{ if(rs.dataset.k===k)rs.hidden=true; },2400); }
+    }else if(rs.dataset.k&&rs.dataset.k.startsWith("end")){ rs.hidden=true; rs.dataset.k=""; }
   }
   // عدّاد الجاهزين داخل شاشة الكشف
   const rd=$("rdy");
@@ -2055,7 +2085,9 @@ function actions(){
   setTimeout(()=>{const r=$("rg"); if(r)rgSync(r);},0);
   /* الداقش شغّال دايماً لأي لاعب داخل الجولة، حتى لو مو دوره */
   const canDagesh = (S.phase==="mic"||S.phase==="offer") && v.bet>0 && !v.folded && !v.out && !S.revealed.has(v.i);
-  const alwaysDagesh = canDagesh
+  /* صاحب المايك عنده زر "داقش" جنب "اعرض التقسيم"، فما نكرّره تحت */
+  const bossSplitting = S.phase==="mic" && S.boss===S.viewer;
+  const alwaysDagesh = canDagesh && !bossSplitting
     ? `<div class="always-dagesh"><button class="act b-pom" onclick="askDagesh('dagesh-any')">داقش الآن — اكشف الورق</button>
        ${HELP?`<span>تقدر تداقش في أي لحظة، حتى لو مو دورك</span>`:""}</div>` : "";
   /* p = المهم بس. d = الشرح التفصيلي، يطلع لما يضغط "اشرح لي" (وينحفظ اختياره) */
