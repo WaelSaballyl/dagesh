@@ -1420,7 +1420,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260914-0729";
+const BUILD="20260914-0747";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1603,10 +1603,11 @@ function fireworks(ms){
   const P=[], R=[], F=[], t0=performance.now();
   const add=(x,y,vx,vy,pal,decay,w,o)=>P.push(Object.assign(
     {x,y,px:x,py:y,vx,vy,life:1,decay,w,hot:pal[0],col:pal[1],drag:.982,grav:.045},o||{}));
+  const RG=.55;   // جاذبية الصاروخ — كانت .09 فيطلع بطيء (ثانيتين). الحين يوصل بأقل من ثانية
   const launch=()=>{
     const x=W*rnd(.14,.86), ty=Hh*rnd(.14,.4);
     // سرعة تخليه يوقف بالضبط عند الارتفاع المطلوب مع الجاذبية
-    R.push({x,y:Hh+10,px:x,py:Hh+10,vx:rnd(-.5,.5),vy:-Math.sqrt(2*.09*(Hh+10-ty)),
+    R.push({x,y:Hh+10,px:x,py:Hh+10,vx:rnd(-.5,.5),vy:-Math.sqrt(2*RG*(Hh+10-ty)),
             pal:PAL[(Math.random()*PAL.length)|0]});
   };
   const burst=(x,y,pal)=>{
@@ -1631,30 +1632,35 @@ function fireworks(ms){
         add(x,y,Math.cos(a)*sp,Math.sin(a)*sp,pal,rnd(.011,.015),2,{crackle:true}); }
     }
   };
-  let last=0;
+  let last=0, prevT=0;
   const step=now=>{
     const el=now-t0;
+    /* الحركة على الوقت مو على عدد الإطارات — الجوال البطيء ما يخليها تتباطأ */
+    const dt=prevT?Math.min(3,Math.max(.5,(now-prevT)/16.67)):1; prevT=now;
     if(now-last>(small?560:440) && el<ms-1300){ last=now; launch();
       if(Math.random()<.4)setTimeout(()=>{ if(FW&&FW.cv===cv)launch(); },170); }
     // الذيول: نبهّت الإطار القديم بدل ما نمسحه كامل
     g.globalCompositeOperation="destination-out";
-    g.globalAlpha=1; g.fillStyle="rgba(0,0,0,.26)"; g.fillRect(0,0,W,Hh);
+    g.globalAlpha=1; g.fillStyle=`rgba(0,0,0,${(1-Math.pow(.74,dt)).toFixed(3)})`; g.fillRect(0,0,W,Hh);
     g.globalCompositeOperation="lighter"; g.lineCap="round";
     // وهج لحظة الانفجار
-    for(let k=F.length-1;k>=0;k--){ const f=F[k]; f.life-=.07; if(f.life<=0){F.splice(k,1);continue;}
+    for(let k=F.length-1;k>=0;k--){ const f=F[k]; f.life-=.07*dt; if(f.life<=0){F.splice(k,1);continue;}
       const rr=f.r*(1.25-f.life*.45), gr=g.createRadialGradient(f.x,f.y,0,f.x,f.y,rr);
       gr.addColorStop(0,rgba(f.c,.32*f.life)); gr.addColorStop(1,rgba(f.c,0));
       g.fillStyle=gr; g.beginPath(); g.arc(f.x,f.y,rr,0,7); g.fill(); }
     // الصواريخ
     for(let k=R.length-1;k>=0;k--){ const r=R[k];
-      r.px=r.x; r.py=r.y; r.x+=r.vx; r.y+=r.vy; r.vy+=.09;
-      g.globalAlpha=.9; g.strokeStyle="#FFEBD2"; g.lineWidth=2.2;
-      g.beginPath(); g.moveTo(r.px,r.py+7); g.lineTo(r.x,r.y); g.stroke();
+      r.px=r.x; r.py=r.y; r.x+=r.vx*dt; r.y+=r.vy*dt; r.vy+=RG*dt;
+      g.globalAlpha=.35; g.strokeStyle="#FFD9A8"; g.lineWidth=1.6;          // ذيل طويل خفيف
+      g.beginPath(); g.moveTo(r.x-r.vx*3,r.y-r.vy*3); g.lineTo(r.x,r.y); g.stroke();
+      g.globalAlpha=.95; g.strokeStyle="#FFF4E4"; g.lineWidth=2.4;          // رأس ساطع
+      g.beginPath(); g.moveTo(r.px,r.py); g.lineTo(r.x,r.y); g.stroke();
       if(Math.random()<.55)add(r.x+rnd(-1,1),r.y+5,rnd(-.35,.35),rnd(.4,1.3),["#FFE9C9","#E8A04A"],.05,1.1,{grav:.02});
-      if(r.vy>=-.4){ burst(r.x,r.y,r.pal); R.splice(k,1); } }
+      if(r.vy>=-RG){ burst(r.x,r.y,r.pal); R.splice(k,1); } }
     // الشرار
     for(let k=P.length-1;k>=0;k--){ const q=P[k];
-      q.px=q.x; q.py=q.y; q.vx*=q.drag; q.vy=q.vy*q.drag+q.grav; q.x+=q.vx; q.y+=q.vy; q.life-=q.decay;
+      const dr=Math.pow(q.drag,dt);
+      q.px=q.x; q.py=q.y; q.vx*=dr; q.vy=q.vy*dr+q.grav*dt; q.x+=q.vx*dt; q.y+=q.vy*dt; q.life-=q.decay*dt;
       if(q.life<=0){ P.splice(k,1); continue; }
       if(q.crackle&&!q.popped&&q.life<.5){ q.popped=true;
         if(P.length<1500)for(let j=0;j<3;j++){ const a=Math.random()*7;
