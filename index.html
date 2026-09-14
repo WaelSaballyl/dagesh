@@ -155,11 +155,6 @@ button{font:inherit;cursor:pointer}
 .dgmark{font-style:normal;font-size:11px;font-weight:800;background:var(--accent);color:#fff;
   border-radius:99px;padding:2px 9px;margin-inline-start:6px;vertical-align:1px;white-space:nowrap}
 .rdy{font-size:11.5px;color:var(--ink-3);text-align:center;margin:12px 0 4px;min-height:1em}
-.rdy .autonext{margin:8px auto 0}
-.autonext{flex:1 1 100%;width:100%;max-width:340px;height:4px;border-radius:99px;background:var(--rule-2);overflow:hidden}
-.autonext i{display:block;height:100%;background:var(--ink-2);border-radius:inherit;transform-origin:100% 50%;
-  animation:autoBar linear forwards}
-@keyframes autoBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 .hintb{background:none;border:1px solid var(--rule-2);color:var(--ink-2);border-radius:99px;
   font-size:11.5px;font-weight:600;padding:3px 11px;margin-inline-start:9px;vertical-align:1px;transition:.15s}
 .hintb:hover{border-color:var(--warn);color:var(--warn)}
@@ -1411,7 +1406,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260914-0716";
+const BUILD="20260914-0717";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -2028,8 +2023,7 @@ function render(){
   // عدّاد الجاهزين داخل شاشة الكشف
   const rd=$("rdy");
   if(rd){
-    const a=autoNext();
-    rd.innerHTML=a?`<span>${S.overPending?"النتيجة النهائية بعد لحظات…":"الجولة الجاية تبدأ لحالها…"}</span>${autoBar(a)}`:"";
+    autoNext(); rd.innerHTML="";
   }
   actions();
 }
@@ -2037,7 +2031,7 @@ function render(){
 /* زر "اشرح لي": الشرح التفصيلي للمبتدئين، والخبير يشوف المهم بس */
 let HELP=(()=>{try{return localStorage.getItem("dagesh-help")==="1"}catch(e){return false}})();
 function toggleHelp(){ HELP=!HELP; try{localStorage.setItem("dagesh-help",HELP?"1":"0")}catch(e){} if(S)render(); }
-/* الجولة الجاية تبدأ لحالها — ثانيتين ونص بعد الجولة العادية، و٦ بعد الكشف عشان تلحقون تشوفون الورق.
+/* الجولة الجاية تبدأ لحالها بدون أي عدّاد — ثانية بعد الجولة العادية، و٣ بعد الكشف عشان يلحق يبان الورق.
    كل جهاز يعلن إنه جاهز لحاله، والمضيف يبدأ لما يجهز الكل (أو بعد ٢٥ ثانية لو أحد نايم) */
 let AUTO={k:"",at:0,ms:0};
 function autoNext(){
@@ -2045,15 +2039,11 @@ function autoNext(){
   const key=()=>(isOnline()?"on":"off")+":"+S.handNo;
   const k=key();
   if(AUTO.k!==k){
-    const ms=(S.rev&&S.rev.h===S.handNo)?6000:2500;   // وائل حس ٥ و١٠ ثواني طويلة
+    const ms=(S.rev&&S.rev.h===S.handNo)?3000:1000;   // لازم ما تنلاحظ — ٥/١٠ ثم ٢.٥/٦ كانت طويلة
     AUTO={k,at:Date.now()+ms,ms};
     setTimeout(()=>{ if(AUTO.k===k&&S&&S.phase==="done"&&key()===k)act("next"); },ms);
   }
   return AUTO;
-}
-function autoBar(a){
-  const left=Math.max(0,a.at-Date.now());
-  return `<div class="autonext"><i style="animation-duration:${a.ms}ms;animation-delay:-${a.ms-left}ms"></i></div>`;
 }
 function actions(){
   const bar=$("actions"),v=S.players[S.viewer];
@@ -2078,8 +2068,8 @@ function actions(){
         ? `الكل انسحب — <b>مراهنتك ${fmt(S.solo.amt)} صارت لك</b>. `
         : `الكل انسحب — <b>${esc(S.solo.name)}</b> أخذ مراهنته ${fmt(S.solo.amt)}. `):"";
     if(S.phase==="over")return H(`${solo}انتهت الجلسة.`,"");
-    const a=autoNext();
-    return H(`${solo}${S.overPending?"النتيجة النهائية بعد لحظات…":"الجولة الجاية تبدأ لحالها…"}`, a?autoBar(a):"");
+    autoNext();
+    return H(solo,"");
   }
 
   // طلبات انسحاب معلّقة عندك كصاحب مايك
