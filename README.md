@@ -4,7 +4,10 @@
 
 [English](#english) | [العربية](#arabic)
 
-![Dagesh](og.png)
+<p align="center">
+  <img src="screenshots/laptop.jpg" alt="Dagesh on a laptop" width="80%">
+  <img src="screenshots/phone.jpg" alt="Dagesh on a phone" width="17%">
+</p>
 
 **Play it here:** https://waelsaballyl.github.io/dagesh/
 
@@ -72,6 +75,11 @@ Sound effects come from **Freesound** (CC0) and **Pixabay** (Pixabay Content Lic
 # داقش
 
 [English](#english) | [العربية](#arabic)
+
+<p align="center">
+  <img src="screenshots/phone.jpg" alt="داقش على الجوال" width="17%">
+  <img src="screenshots/laptop.jpg" alt="داقش على اللابتوب" width="80%">
+</p>
 
 **رابط اللعبة:** https://waelsaballyl.github.io/dagesh/
 
