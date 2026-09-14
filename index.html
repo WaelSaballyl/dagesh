@@ -349,6 +349,7 @@ button.act[disabled]{opacity:.35;cursor:not-allowed}
   backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;
   overscroll-behavior:contain;touch-action:none}
 .ov[hidden]{display:none}
+.fwon .ov{-webkit-backdrop-filter:none;backdrop-filter:none}
 /* وقت ما تكون النافذة مفتوحة، الخلفية تتثبّت — قبل كان السحب يمرّر الصفحة اللي تحت */
 body.noscroll{position:fixed;inset-inline:0;width:100%;overflow:hidden}
 .sheet{background:var(--paper);border:2px solid var(--ink);border-radius:14px;padding:26px;
@@ -1430,7 +1431,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260914-2325";
+const BUILD="20260915-0023";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1601,7 +1602,8 @@ function toggleMute(){                       // هادي ← عادي ← صام
 
 /* ================= احتفال الفوز ================= */
 let FW=null;
-function stopFireworks(){ if(FW){cancelAnimationFrame(FW.raf);removeEventListener("resize",FW.fit);FW.cv.remove();FW=null;} }
+function stopFireworks(){ document.body.classList.remove("fwon");
+  if(FW){cancelAnimationFrame(FW.raf);removeEventListener("resize",FW.fit);FW.cv.remove();FW=null;} }
 /* ألعاب نارية حديثة: الصاروخ يطلع بذيل ناعم ويرمي شرار، ولحظة الانفجار وهج خفيف،
    والانفجارات أربعة أنواع (كرة، حلقة مايلة، ذهبي نازل، بريق يطقطق).
    الرسم بـ "lighter" عشان الألوان تتوهّج لما تتداخل، والذيول تبهت تدريجياً بدل ما تنمسح كل إطار.
@@ -1610,11 +1612,14 @@ function fireworks(ms){
   stopFireworks();
   const cv=document.createElement("canvas");
   cv.className="fw"; cv.style.width="100%"; cv.style.height="100%";   // بدونها كان الكانفس ٣ أضعاف الشاشة في الجوال
-  document.body.appendChild(cv);
+  document.body.appendChild(cv); document.body.classList.add("fwon");
   const g=cv.getContext("2d");
-  const dpr=Math.min(2,devicePixelRatio||1);
-  let W=innerWidth, Hh=innerHeight;
-  const fit=()=>{ W=innerWidth; Hh=innerHeight; cv.width=W*dpr; cv.height=Hh*dpr; g.setTransform(dpr,0,0,dpr,0,0); };
+  let W=innerWidth, Hh=innerHeight, dpr=1;
+  /* دقة الرسم على قد الشاشة: شاشة اللاب الكبيرة كانت ترسم ملايين البكسلات كل إطار.
+     نخلي مجموع البكسلات حوالي ١.١ مليون — الجوال يوصل دقته الكاملة، واللاب ينزل شوي وما يبان */
+  const fit=()=>{ W=innerWidth; Hh=innerHeight;
+    dpr=Math.max(.75,Math.min(2,devicePixelRatio||1,Math.sqrt(1.1e6/(W*Hh))));
+    cv.width=Math.round(W*dpr); cv.height=Math.round(Hh*dpr); g.setTransform(dpr,0,0,dpr,0,0); };
   fit(); addEventListener("resize",fit);
   const small=W<700;
   // كل لون: [الأبيض الحار أول الانفجار، لونه بعدين]
@@ -1624,7 +1629,7 @@ function fireworks(ms){
   const rnd=(a,b)=>a+Math.random()*(b-a);
   const P=[], R=[], F=[], t0=performance.now();
   const add=(x,y,vx,vy,pal,decay,w,o)=>P.push(Object.assign(
-    {x,y,px:x,py:y,vx,vy,life:1,decay,w,hot:pal[0],col:pal[1],drag:.982,grav:.045},o||{}));
+    {x,y,px:x,py:y,hx:x,hy:y,vx,vy,life:1,decay,w,hot:pal[0],col:pal[1],drag:.982,grav:.045},o||{}));
   const RG=2.4;   // جاذبية الصاروخ — .09 (ثانيتين) ثم .55 (٠.٧٥ث) كانت بطيئة. الحين ينطلق ويوصل بحوالي ثلث ثانية
   const launch=()=>{
     const x=W*rnd(.14,.86), ty=Hh*rnd(.14,.4);
@@ -1634,8 +1639,8 @@ function fireworks(ms){
   };
   const burst=(x,y,pal)=>{
     sfx("boom");
-    F.push({x,y,r:small?80:130,life:1,c:pal[1]});
-    const n=small?64:104, kind=Math.random(), base=small?3.1:4.3;
+    F.push({x,y,r:small?70:100,life:1,c:pal[1]});
+    const n=small?64:72, kind=Math.random(), base=small?3.1:4.3;
     if(kind<.4){                                   // كرة
       for(let k=0;k<n;k++){ const a=Math.random()*Math.PI*2, sp=base*Math.cbrt(Math.random());
         add(x,y,Math.cos(a)*sp,Math.sin(a)*sp,pal,rnd(.009,.013),2.1); }
@@ -1659,17 +1664,18 @@ function fireworks(ms){
     const el=now-t0;
     /* الحركة على الوقت مو على عدد الإطارات — الجوال البطيء ما يخليها تتباطأ */
     const dt=prevT?Math.min(3,Math.max(.5,(now-prevT)/16.67)):1; prevT=now;
-    if(now-last>(small?330:260) && el<ms-1300){ last=now; launch();
+    if(now-last>(small?330:340) && el<ms-1300){ last=now; launch();
       if(Math.random()<.4)setTimeout(()=>{ if(FW&&FW.cv===cv)launch(); },170); }
-    // الذيول: نبهّت الإطار القديم بدل ما نمسحه كامل
-    g.globalCompositeOperation="destination-out";
-    g.globalAlpha=1; g.fillStyle=`rgba(0,0,0,${(1-Math.pow(.74,dt)).toFixed(3)})`; g.fillRect(0,0,W,Hh);
+    /* قسنا كل جزء على مقاس اللاب: تبهيت الشاشة كلها كل إطار (عشان الذيول) ياخذ ٨ms،
+       وهالة الشرار ٢٥ms لحالها — والإطار كله لازم يكون تحت ١٦ms. فالحين: نمسح الشاشة
+       (٢ms)، وكل شرارة ترسم ذيلها بنفسها من نقطة تلحقها، وبدون هالة. والشرار الهادي نقاط */
+    g.clearRect(0,0,W,Hh);
     g.globalCompositeOperation="lighter"; g.lineCap="round";
     // وهج لحظة الانفجار
-    for(let k=F.length-1;k>=0;k--){ const f=F[k]; f.life-=.07*dt; if(f.life<=0){F.splice(k,1);continue;}
+    for(let k=F.length-1;k>=0;k--){ const f=F[k]; f.life-=.1*dt; if(f.life<=0){F.splice(k,1);continue;}
       const rr=f.r*(1.25-f.life*.45), gr=g.createRadialGradient(f.x,f.y,0,f.x,f.y,rr);
-      gr.addColorStop(0,rgba(f.c,.32*f.life)); gr.addColorStop(1,rgba(f.c,0));
-      g.fillStyle=gr; g.beginPath(); g.arc(f.x,f.y,rr,0,7); g.fill(); }
+      gr.addColorStop(0,rgba(f.c,.34*f.life)); gr.addColorStop(1,rgba(f.c,0));
+      g.globalAlpha=1; g.fillStyle=gr; g.beginPath(); g.arc(f.x,f.y,rr,0,7); g.fill(); }
     // الصواريخ
     for(let k=R.length-1;k>=0;k--){ const r=R[k];
       r.px=r.x; r.py=r.y; r.x+=r.vx*dt; r.y+=r.vy*dt; r.vy+=RG*dt;
@@ -1677,23 +1683,27 @@ function fireworks(ms){
       g.beginPath(); g.moveTo(r.x-r.vx*1.6,r.y-r.vy*1.6); g.lineTo(r.x,r.y); g.stroke();
       g.globalAlpha=.95; g.strokeStyle="#FFF4E4"; g.lineWidth=2.4;          // رأس ساطع
       g.beginPath(); g.moveTo(r.px,r.py); g.lineTo(r.x,r.y); g.stroke();
-      if(Math.random()<.55)add(r.x+rnd(-1,1),r.y+5,rnd(-.35,.35),rnd(.4,1.3),["#FFE9C9","#E8A04A"],.05,1.1,{grav:.02});
+      if(Math.random()<.5)add(r.x+rnd(-1,1),r.y+5,rnd(-.35,.35),rnd(.4,1.3),["#FFE9C9","#E8A04A"],.05,1.1,{grav:.02});
       if(r.vy>=-RG){ burst(r.x,r.y,r.pal); R.splice(k,1); } }
     // الشرار
+    const lag=1-Math.pow(.6,dt);                  // نقطة الذيل تلحق الشرارة بتأخير ~٣ إطارات
     for(let k=P.length-1;k>=0;k--){ const q=P[k];
       const dr=Math.pow(q.drag,dt);
-      q.px=q.x; q.py=q.y; q.vx*=dr; q.vy=q.vy*dr+q.grav*dt; q.x+=q.vx*dt; q.y+=q.vy*dt; q.life-=q.decay*dt;
+      q.vx*=dr; q.vy=q.vy*dr+q.grav*dt; q.x+=q.vx*dt; q.y+=q.vy*dt; q.life-=q.decay*dt;
+      q.hx+=(q.x-q.hx)*lag; q.hy+=(q.y-q.hy)*lag;
       if(q.life<=0){ P.splice(k,1); continue; }
       if(q.crackle&&!q.popped&&q.life<.5){ q.popped=true;
-        if(P.length<1500)for(let j=0;j<3;j++){ const a=Math.random()*7;
+        if(P.length<1000)for(let j=0;j<3;j++){ const a=Math.random()*7;
           add(q.x,q.y,Math.cos(a)*1.3,Math.sin(a)*1.3,["#FFFFFF","#FFF3D6"],.07,1.1,{grav:.02}); } }
       let a=Math.min(1,q.life*1.15); if(q.twinkle&&Math.random()<.3)a*=.25;
       const c=q.life>.78?q.hot:q.col;             // يبدأ أبيض حار وبعدين ياخذ لونه
-      if(q.w>1.5&&q.life>.35){                     // هالة ناعمة حوالين الشرارة
-        g.globalAlpha=a*.16; g.strokeStyle=c; g.lineWidth=q.w*4.5;
-        g.beginPath(); g.moveTo(q.px,q.py); g.lineTo(q.x,q.y); g.stroke(); }
-      g.globalAlpha=a; g.strokeStyle=c; g.lineWidth=q.w*(.55+q.life*.6);
-      g.beginPath(); g.moveTo(q.px,q.py); g.lineTo(q.x,q.y); g.stroke(); }
+      g.globalAlpha=a;
+      if(q.life>.42){                               // وهي سريعة: خط بذيل
+        g.strokeStyle=c; g.lineWidth=q.w*(.6+q.life*.75);
+        g.beginPath(); g.moveTo(q.hx,q.hy); g.lineTo(q.x,q.y); g.stroke();
+      }else{                                        // وهي تبرد وتنزل: نقطة (أرخص بكثير)
+        const sz=q.w*(.55+q.life*.9)+.3; g.fillStyle=c; g.fillRect(q.x-sz/2,q.y-sz/2,sz,sz);
+      } }
     g.globalAlpha=1; g.globalCompositeOperation="source-over";
     if(el<ms||P.length||R.length) FW.raf=requestAnimationFrame(step); else stopFireworks();
   };
