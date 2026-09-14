@@ -1421,7 +1421,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260914-0912";
+const BUILD="20260914-0919";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1453,7 +1453,7 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden)checkUpda
 const SFXDIR="sfx/";
 const SFXFILES=["take1","take2","take3","riffle","crackle1","crackle2","sting",
   "notify","pop","whoosh","yes","slide1","slide2","slide3","slide4",
-  "fold1","fold2","shuffle","fan","chip1","chip2","chip3","chipsWin","chipsHit",
+  "shuffle","chip1","chip2","chip3","chipsWin","chipsHit",
   "boom1","boom2","boomLow","win","win2","lose","party","turn"];
 let AC=null, BUF=Object.create(null), SFXASKED=0, MG=null;
 
@@ -1561,14 +1561,14 @@ function sfx(kind){
       case "leave":  play("pop",.3,0,.82); break;                   // أحد طلع
       case "crackle":play(pickOne(["crackle1","crackle2"]),.5,0,vary()); break;
       case "chip":   sChip(0); break;
-      case "fold":   play(pickOne(["fold1","fold2"]),.5,0,vary()); break;
+      case "fold":   play(pickOne(["take2","take3"]),.62,0,vary());     // رمي الورق على الكومة (أصوات وائل)
+                     play("take1",.45,.075,vary()); break;
       case "turn":   play("notify",.42); break;                     // دورك: تنبيه ناعم
       /* داقش: ضربة ورق وحدة واضحة على الطاولة، وبعدها الورق ينقلب.
          قبل كانت ثلاث ورقات عشوائية ورا بعض — وبعضها مو ضربة وحدة بل
          خشخشة فيها ٤-٥ طقّات، فتتراكب وتطلع صوت غريب */
-      case "dagesh": play("fold1",.8);                     // ضربة الورق على الطاولة
-                     play("sting",.6,.02);                  // + ضربة درامية قصيرة (Reveal Stinger)
-                     play("fan",.32,.16); break;            // والورق ينقلب
+      case "dagesh": play("take1",1);                      // ضربة الورق على الطاولة
+                     play("sting",.95,.03); break;          // + ضربة درامية واضحة (Reveal Stinger)
       /* الفوز بالجولة: الفلوس تنسحب لك — بدون أي نغمة */
       case "win":    play(pickOne(["win","win2"]),.7);
                      play("chipsWin",.5,.28); break;
