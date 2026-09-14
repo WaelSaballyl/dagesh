@@ -28,6 +28,31 @@ From freesound.org
       "firework_rocket_ignition" — derplayer
       https://freesound.org/s/587173/
 
+From pixabay.com (Pixabay Content License — free to use, no attribution required)
+------------------------------------------------------------------------------
+  card take / play (take1, take2)
+      "Taking Playing Card" 1 & 2 — oxidvideos
+      https://pixabay.com/sound-effects/ (IDs 522520, 522516)
+  quick riffle before each deal (riffle)
+      "Shuffling Deck of Cards" — oxidvideos (ID 522518)
+  full riffle + bridge on the first hand (shuffle)
+      "Riffle Card Shuffle" — freesound_community (ID 104313)
+  firework crackle after glitter bursts (crackle1, crackle2)
+      "Sound Effects of Fireworks Diwali Celebration" — engyclick (ID 421220)
+  dagesh reveal hit (sting)
+      "Reveal Stinger" — Universfield
+      https://pixabay.com/sound-effects/film-special-effects-reveal-stinger-153300/
+  third card hit (take3)
+      "Taking Playing Card 3" — oxidvideos (ID 522513)
+  your-turn chime (notify)
+      "Soft Notification" — Universfield (ID 146623)
+  chat message / player joined-left (pop)
+      "Happy Pop 2" — floraphonic (ID 185287)
+  new-round air whoosh (whoosh)
+      "Soft luxury air whoosh #8" — Sdanezis (ID 592506)
+  accept / ask-for-more click (yes)
+      "Soft UI Click" — Universfield (ID 147352)
+
 Processing
 ----------
 Long recordings were sliced into single hits at their transients, trimmed,

@@ -1135,7 +1135,7 @@ function startHand(){
   for(let c=0;c<S.n;c++){k=(k+1)%S.n;if(!S.players[k].out)S.order.push(k);}
   S.turn=0;S.phase="betting";
   if(S.order.length)say(`يبدأ ${S.players[S.order[0]].name} — أول واحد بعد الموزّع`);
-  sfx("deal");
+  sfx(S.handNo===1?"shuffle":"deal");
   advance();
 }
 const highBet=()=>Math.max(0,...S.players.map(p=>p.bet));
@@ -1160,7 +1160,7 @@ function bet(p,amt){
   say(`${p.name} ${allin?"نزل أول-إن بـ":"راهن"} ${fmt(amt)}`);
   S.pot=Math.max(0,...S.players.map(x=>x.bet));
   fly(p.i,money(amt),"chip");
-  sfx("chip");
+  sfx(allin?"allin":"chip");
   pileAdd();
   bump();
 }
@@ -1226,6 +1226,7 @@ function botMic(boss){
   proposeSplit(boss,shares);
 }
 function proposeSplit(boss,shares){
+  sfx("offer");
   for(const p of bettors()){p.share=shares[p.i]||0;p.resp=(p.i===boss.i)?"ok":null;}
   S.phase="offer";
   say(`${boss.name} عرض تقسيم: ${bettors().map(p=>`${p.name} ${fmt(p.share)}`).join(" · ")}`,"hi");
@@ -1420,7 +1421,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260914-0854";
+const BUILD="20260914-0912";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1450,7 +1451,8 @@ addEventListener("load",()=>setTimeout(checkUpdate,2500));
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden)checkUpdate(); });
 
 const SFXDIR="sfx/";
-const SFXFILES=["card1","card2","card3","card4","slide1","slide2","slide3","slide4",
+const SFXFILES=["take1","take2","take3","riffle","crackle1","crackle2","sting",
+  "notify","pop","whoosh","yes","slide1","slide2","slide3","slide4",
   "fold1","fold2","shuffle","fan","chip1","chip2","chip3","chipsWin","chipsHit",
   "boom1","boom2","boomLow","win","win2","lose","party","turn"];
 let AC=null, BUF=Object.create(null), SFXASKED=0, MG=null;
@@ -1536,7 +1538,8 @@ function play(name,vol,at,rate){
   }catch(e){}
 }
 
-function sCard(v,at){ play(pickOne(["card1","card2","card3","card4"]),.55*(v||1),at||0,vary()); }
+/* الورق: ضربتين نظيفة من Pixabay (القديمة بعضها كان فيه ٤-٥ طقّات) */
+function sCard(v,at){ play(pickOne(["take1","take2","take3"]),.55*(v||1),at||0,vary()); }
 function sSlide(v,at){ play(pickOne(["slide1","slide2","slide3","slide4"]),.55*(v||1),at||0,vary()); }
 function sChip(at){ play(pickOne(["chip1","chip2","chip3"]),.45,at||0,vary()); }
 
@@ -1544,23 +1547,33 @@ function sfx(kind){
   if(MUTED)return;
   try{
     switch(kind){
-      case "deal":   play("fan",.5);                       // مروحة الورق ثم أربع ورقات
-                     for(let k=0;k<4;k++)sCard(.75,.22+k*.14); break;
+      case "deal":   play("whoosh",.3);                    // هوا خفيف مع "الجولة N"، ثم لخبطة سريعة وأربع ورقات
+                     play("riffle",.5,.18);
+                     for(let k=0;k<4;k++)sCard(.72,.68+k*.13); break;
       case "card":   sCard(1); break;
-      case "shuffle":play("shuffle",.5); break;
+      case "shuffle":play("whoosh",.3); play("shuffle",.5,.18);   // أول جولة: ريفل كامل والورق ينزل، ثم التوزيع
+                     for(let k=0;k<4;k++)sCard(.72,2.38+k*.13); break;
+      case "allin":  play("chipsHit",.55); sChip(.14); break;     // أول-إن: كومة فيش تنزل مرة وحدة
+      case "offer":  sSlide(.8); break;                             // صاحب المايك يرمي ورقة التقسيم
+      case "yes":    play("yes",.45); break;                        // ضغطتك "أوافق"
+      case "no":     play("yes",.4,0,.78); break;                   // "أبي أكثر": نفس النقرة بس أوطى
+      case "join":   play("pop",.4,0,1.08); break;                  // أحد دخل الغرفة
+      case "leave":  play("pop",.3,0,.82); break;                   // أحد طلع
+      case "crackle":play(pickOne(["crackle1","crackle2"]),.5,0,vary()); break;
       case "chip":   sChip(0); break;
       case "fold":   play(pickOne(["fold1","fold2"]),.5,0,vary()); break;
-      case "turn":   play("turn",.42); break;
+      case "turn":   play("notify",.42); break;                     // دورك: تنبيه ناعم
       /* داقش: ضربة ورق وحدة واضحة على الطاولة، وبعدها الورق ينقلب.
          قبل كانت ثلاث ورقات عشوائية ورا بعض — وبعضها مو ضربة وحدة بل
          خشخشة فيها ٤-٥ طقّات، فتتراكب وتطلع صوت غريب */
-      case "dagesh": play("fold1",.85);
-                     play("fan",.5,.12); break;
+      case "dagesh": play("fold1",.8);                     // ضربة الورق على الطاولة
+                     play("sting",.6,.02);                  // + ضربة درامية قصيرة (Reveal Stinger)
+                     play("fan",.32,.16); break;            // والورق ينقلب
       /* الفوز بالجولة: الفلوس تنسحب لك — بدون أي نغمة */
       case "win":    play(pickOne(["win","win2"]),.7);
                      play("chipsWin",.5,.28); break;
       case "lose":   play("lose",.5); break;
-      case "msg":    play("turn",.28,0,1.2); break;
+      case "msg":    play("pop",.32); break;                        // رسالة دردشة
       case "boom":   play(pickOne(["boom1","boom2","boomLow"]),.6,0,vary()); break;
       /* المليون: تصفيق وهتاف حقيقي */
       case "party":  play("party",.85); break;
@@ -1628,7 +1641,7 @@ function fireworks(ms){
         add(x,y,Math.cos(a)*sp,Math.sin(a)*sp,["#FFF1C9","#D9A441"],rnd(.0055,.0085),1.7,
             {drag:.974,grav:.028,twinkle:true}); }
     }else{                                         // بريق يطقطق
-      for(let k=0;k<Math.round(n*.7);k++){ const a=Math.random()*Math.PI*2, sp=base*Math.sqrt(Math.random());
+      setTimeout(()=>{ if(FW)sfx("crackle"); },320);      for(let k=0;k<Math.round(n*.7);k++){ const a=Math.random()*Math.PI*2, sp=base*Math.sqrt(Math.random());
         add(x,y,Math.cos(a)*sp,Math.sin(a)*sp,pal,rnd(.011,.015),2,{crackle:true}); }
     }
   };
@@ -2769,7 +2782,16 @@ function applyState(st){
     mode:"online",gate:false,viewer:me,busy:false,diff:"mid",
     spectator:!!st.spectator});
   /* الأصوات تنعزف عند المضيف بس — فنعزفها هنا للضيف لما تتغير المرحلة */
+  if(prev&&prev.handNo!==st.handNo&&st.phase==="betting")   // الضيف يسمع اللخبطة والتوزيع زي المضيف
+    sfx(st.handNo===1?"shuffle":"deal");
   if(prev&&prev.handNo===st.handNo){
+    const pp=prev.players||[]; let chip=0,allin=0,fold=0;
+    st.players.forEach((q,k)=>{ const o=pp[k]; if(!o)return;
+      if(q.bet>o.bet){ if(q.bet>=q.chips)allin=1; else chip=1; }
+      if(q.folded&&!o.folded&&!q.out)fold=1; });
+    if(allin)sfx("allin"); else if(chip)sfx("chip");
+    if(fold)sfx("fold");
+    if(prev.phase!=="offer"&&st.phase==="offer") sfx("offer");
     if(prev.phase!=="showdown"&&st.phase==="showdown") sfx("dagesh");
     if(!st.spectator&&prev.phase!=="done"&&st.phase==="done"){
       const a=prev.players&&prev.players[me], b=st.players[me];
@@ -2780,6 +2802,7 @@ function applyState(st){
 }
 
 function act(type,payload){
+  if(type==="resp")sfx(payload&&payload.r==="ok"?"yes":"no");   // صوت ضغطتك على طول، قبل ما يرد المضيف
   if(!isOnline())return applyAct(S.viewer,type,payload);
   if(isSpec())return;
   if(isHost())return applyAct(NET.seat,type,payload);
@@ -2994,7 +3017,7 @@ function hostOnMsg(topic,d){
       const role=(started||seat<0)?"spec":"player";
       r={cid,name:nm,seat,role,online:true};
       NET.roster.push(r);
-      say2(`${nm} ${role==="spec"?"دخل متفرّج":"دخل الغرفة"}`);
+      say2(`${nm} ${role==="spec"?"دخل متفرّج":"دخل الغرفة"}`); sfx("join");
     }
     trToPeer(cid,{t:"welcome",seat:r.seat,role:r.role,code:NET.code});
     trToPeer(cid,{t:"chat",list:NET.chat||[]});
@@ -3003,7 +3026,7 @@ function hostOnMsg(topic,d){
   }
   else if(d.t==="bye"){
     const r=findCid(cid); if(!r)return;
-    r.online=false; say2(`${r.name} طلع`); pushRoster(); if(S&&S.phase)render();
+    r.online=false; say2(`${r.name} طلع`); sfx("leave"); pushRoster(); if(S&&S.phase)render();
   }
   else if(d.t==="act"){ const r=findCid(cid); if(r&&r.role==="player")applyAct(r.seat,d.type,d.payload); }
   else if(d.t==="chat"){ const r=findCid(cid); chatPush(r?r.name:"لاعب",d.text); }
