@@ -1420,7 +1420,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260914-0747";
+const BUILD="20260914-0854";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1603,7 +1603,7 @@ function fireworks(ms){
   const P=[], R=[], F=[], t0=performance.now();
   const add=(x,y,vx,vy,pal,decay,w,o)=>P.push(Object.assign(
     {x,y,px:x,py:y,vx,vy,life:1,decay,w,hot:pal[0],col:pal[1],drag:.982,grav:.045},o||{}));
-  const RG=.55;   // جاذبية الصاروخ — كانت .09 فيطلع بطيء (ثانيتين). الحين يوصل بأقل من ثانية
+  const RG=2.4;   // جاذبية الصاروخ — .09 (ثانيتين) ثم .55 (٠.٧٥ث) كانت بطيئة. الحين ينطلق ويوصل بحوالي ثلث ثانية
   const launch=()=>{
     const x=W*rnd(.14,.86), ty=Hh*rnd(.14,.4);
     // سرعة تخليه يوقف بالضبط عند الارتفاع المطلوب مع الجاذبية
@@ -1637,7 +1637,7 @@ function fireworks(ms){
     const el=now-t0;
     /* الحركة على الوقت مو على عدد الإطارات — الجوال البطيء ما يخليها تتباطأ */
     const dt=prevT?Math.min(3,Math.max(.5,(now-prevT)/16.67)):1; prevT=now;
-    if(now-last>(small?560:440) && el<ms-1300){ last=now; launch();
+    if(now-last>(small?330:260) && el<ms-1300){ last=now; launch();
       if(Math.random()<.4)setTimeout(()=>{ if(FW&&FW.cv===cv)launch(); },170); }
     // الذيول: نبهّت الإطار القديم بدل ما نمسحه كامل
     g.globalCompositeOperation="destination-out";
@@ -1652,7 +1652,7 @@ function fireworks(ms){
     for(let k=R.length-1;k>=0;k--){ const r=R[k];
       r.px=r.x; r.py=r.y; r.x+=r.vx*dt; r.y+=r.vy*dt; r.vy+=RG*dt;
       g.globalAlpha=.35; g.strokeStyle="#FFD9A8"; g.lineWidth=1.6;          // ذيل طويل خفيف
-      g.beginPath(); g.moveTo(r.x-r.vx*3,r.y-r.vy*3); g.lineTo(r.x,r.y); g.stroke();
+      g.beginPath(); g.moveTo(r.x-r.vx*1.6,r.y-r.vy*1.6); g.lineTo(r.x,r.y); g.stroke();
       g.globalAlpha=.95; g.strokeStyle="#FFF4E4"; g.lineWidth=2.4;          // رأس ساطع
       g.beginPath(); g.moveTo(r.px,r.py); g.lineTo(r.x,r.y); g.stroke();
       if(Math.random()<.55)add(r.x+rnd(-1,1),r.y+5,rnd(-.35,.35),rnd(.4,1.3),["#FFE9C9","#E8A04A"],.05,1.1,{grav:.02});
