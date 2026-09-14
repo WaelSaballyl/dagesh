@@ -1431,7 +1431,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260915-0023";
+const BUILD="20260915-0044";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -3175,8 +3175,10 @@ function hostGone(){
   const rank=Math.max(0,list.findIndex(r=>r.cid===CID));
   ovShow(`<div class="hero sm"><h2>المضيف طلع</h2>
     <p>نحاول نكمّل الجلسة بدونه. أرصدتكم محفوظة، والجولة الحالية تُلغى ونبدأ جولة جديدة.</p></div>
-    <div class="conn" id="netConn">${rank===0?"انت اللي بتستلم…":"لحظات…"}</div>
-    <div class="ctl" style="margin-top:14px"><button class="act b-quiet" onclick="leaveRoom()">اخرج</button></div>`,"wait");
+    <div class="conn" id="netConn">${rank===0?"انت اللي بتستلم الاستضافة… لحظة":"واحد منكم يستلم الاستضافة… لحظات"}</div>
+    <div class="ctl" style="margin-top:14px">
+      <button class="act b-brass" id="migGo" onclick="ovHide()">كمّل</button>
+      <button class="act b-quiet" onclick="leaveRoom()">اخرج</button></div>`,"wait");
   setTimeout(()=>takeOver(),1000+rank*2500);
 }
 function takeOver(){
@@ -3211,9 +3213,11 @@ function takeOver(){
                                                      : S.players.findIndex(q=>q.bot);
       S.viewer=mySeat;
       say(`${myName} استلم الاستضافة — الجولة أُلغيت ونبدأ من جديد`,"hi");
+      if(OVK==="wait")ovHide();                   // قبل كانت تضل مفتوحة عند اللي استلم وما فيها إلا "اخرج"
       startHand(); pushRoster(); pushState(); render();
       advance();                                  // لو أول دور لبوت يتحرّك لحاله
-    },()=>{ netStatus("ما قدرنا نكمّل — ابدأوا غرفة جديدة",true); });
+    },()=>{ const b=$("migGo"); if(b)b.hidden=true;
+            netStatus("ما قدرنا نكمّل — ابدأوا غرفة جديدة",true); });
   },1200);
 }
 /* ---------- شاشات الغرفة ---------- */
