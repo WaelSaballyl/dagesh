@@ -152,9 +152,19 @@ button{font:inherit;cursor:pointer}
   background:var(--accent);padding:10px 22px;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
 .dgsplash.go{animation:dgPop .55s cubic-bezier(.3,1.6,.4,1) both}
 @keyframes dgPop{from{transform:translate(-50%,-50%) scale(.3) rotate(-6deg);opacity:0}}
-.dgmark{font-style:normal;font-size:9.5px;font-weight:800;background:var(--accent);color:#fff;
-  border-radius:99px;padding:1px 7px;margin-inline-start:5px;vertical-align:2px}
-.rdy{font-size:11.5px;color:var(--ink-3);text-align:center;margin:10px 0 8px;min-height:1em}
+.dgmark{font-style:normal;font-size:11px;font-weight:800;background:var(--accent);color:#fff;
+  border-radius:99px;padding:2px 9px;margin-inline-start:6px;vertical-align:1px;white-space:nowrap}
+.rdy{font-size:11.5px;color:var(--ink-3);text-align:center;margin:12px 0 4px;min-height:1em}
+.rdy .autonext{margin:8px auto 0}
+.autonext{flex:1 1 100%;width:100%;max-width:340px;height:4px;border-radius:99px;background:var(--rule-2);overflow:hidden}
+.autonext i{display:block;height:100%;background:var(--ink-2);border-radius:inherit;transform-origin:100% 50%;
+  animation:autoBar linear forwards}
+@keyframes autoBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.hintb{background:none;border:1px solid var(--rule-2);color:var(--ink-2);border-radius:99px;
+  font-size:11.5px;font-weight:600;padding:3px 11px;margin-inline-start:9px;vertical-align:1px;transition:.15s}
+.hintb:hover{border-color:var(--warn);color:var(--warn)}
+.prompt .hint{display:block;margin-top:7px;padding:8px 12px;border-inline-start:2px solid var(--warn);
+  background:var(--warn-soft);border-radius:6px 0 0 6px;font-size:12.5px;color:var(--ink-2);line-height:1.65}
 /* يكتب… */
 .typing{font-size:11.5px;color:var(--ink-3);min-height:17px;padding:4px 2px 0}
 .chatbtn.typing::after{content:"";position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);
@@ -493,7 +503,8 @@ ol.proj li span{color:var(--ink-3);font-size:12.5px}
 .win-banner.tie b{color:var(--warn)}
 .rev-row{display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid var(--rule)}
 .rev-row .rc{display:flex;gap:2px}
-.rev-row.lose{opacity:.62}
+.rev-row.lose .rc,.rev-row.lose .p{opacity:.55}      /* الورق والمشروع يبهتون — الاسم وكلمة داقش لا */
+.rev-row.lose .w{color:var(--ink-2)}
 .rev-row .amt-col{font-family:"Alexandria",sans-serif;font-weight:800;font-size:14px;
   font-variant-numeric:tabular-nums;min-width:64px;text-align:end}
 .rev-row.win .amt-col{color:var(--gain)}
@@ -925,7 +936,7 @@ select.pick option{background:#14181B;color:var(--ink)}
         <div class="ring" id="ring">
           <div class="felt"></div>
           <div class="core" id="tray">
-            <span class="lbl" id="potLabel">القدر</span>
+            <span class="lbl" id="potLabel">أعلى مراهنة</span>
             <span class="val num" id="pot">0</span>
             <div class="pile" id="pile"></div>
             <span class="ph" id="phase"></span>
@@ -1063,7 +1074,7 @@ function strength(p,opp){const s=probs(p).single;return{single:s,win:Math.pow(s,
 /* ---- الجلسة ---- */
 const GOAL=1000000;          // هدف الفوز ثابت
 function newSession(n,mode,diff,names){
-  LOCALCHAT=[]; landingHide();
+  LOCALCHAT=[]; AUTO.k=""; landingHide();
   buildRanks(n);
   S={n,mode,diff,dealer:(Math.random()*n)|0,pot:0,boss:-1,phase:"",turn:0,order:[],
      goal:GOAL,
@@ -1139,7 +1150,7 @@ function bet(p,amt){
   p.note=allin?`أول-إن ${fmt(amt)}`:`راهن ${fmt(amt)}`;
   say(`${p.name} ${allin?"نزل أول-إن بـ":"راهن"} ${fmt(amt)}`);
   S.pot=Math.max(0,...S.players.map(x=>x.bet));
-  fly(p.i,fmt(amt),"chip");
+  fly(p.i,money(amt),"chip");
   sfx("chip");
   pileAdd();
   bump();
@@ -1168,7 +1179,7 @@ function endBetting(){
   if(b.length===1){                    // الكل انسحب: اللي راهن لحاله ياخذ مراهنته كاملة
     const w=b[0]; S.pot=w.bet; w.chips+=w.bet; S.solo={i:w.i,name:w.name,amt:w.bet};
     say(`الكل انسحب — ${w.name} ياخذ مراهنته ${fmt(w.bet)}`,"hi");
-    fly(w.i,"+"+fmt(w.bet),"chip");
+    fly(w.i,"+"+money(w.bet),"chip");
     if(w.i===S.viewer&&!isSpec()) sfx("win");
     return finishRound();
   }
@@ -1400,7 +1411,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260914-0621";
+const BUILD="20260914-0712";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1607,7 +1618,8 @@ function fireworks(ms){
 
 /* ================= الواجهة ================= */
 const $=i=>document.getElementById(i);
-const fmt=n=>{ const v=Math.round(n); return (v<0?"−$":"$")+Math.abs(v).toLocaleString("en-US"); };
+const fmt=n=>Math.round(n).toLocaleString("en-US");
+const money=n=>"$"+fmt(n);                 // الطاولة بس (المقاعد، الفيش، القدر) — الكلام العربي بدون $
 const pct=c=>Math.min(100,Math.round(c/goal()*1000)/10);   // تقدّمك نحو هدف الفوز
 /* ============ رسم الأوراق ============
    مرسومة كلها بـ SVG داخل الصفحة — ما فيها صور خارجية ولا حقوق نشر. */
@@ -1842,9 +1854,12 @@ function placeBets(ringEl){
                               Math.abs(dy)>1e-3?(h/2)/Math.abs(dy):1e9);
     const t=ext(r.width,r.height), c=ext(b.offsetWidth,b.offsetHeight);   // offset* يتجاهل حركة التكبير
     const off=Math.min(t+c+8, d*0.72);
-    b.style.left=(sx+dx*off)+"px"; b.style.top=(sy+dy*off)+"px";
+    /* بالنسبة مو بالبكسل: لو صغرت الطاولة بعدين (تغيّر ارتفاع الأزرار تحت) تتحرك مع المقاعد */
+    b.style.left=((sx+dx*off)/rb.width*100)+"%"; b.style.top=((sy+dy*off)/rb.height*100)+"%";
   }
 }
+try{ new ResizeObserver(()=>{ const r=$("ring"); if(r&&S&&S.players&&isDesk())placeBets(r); drawBubbles(); })
+       .observe($("ring")); }catch(e){}
 /* فقاعة فوق مقعد اللي كتب — تبان ٤ ثواني ونص. ولو أحد يكتب تطلع "•••" */
 const BUBS=new Map(), _lastBet={};
 function seatBubble(name,text){
@@ -1925,8 +1940,8 @@ function render(){
       ${backs?'<div class="backs"><i></i><i></i><i></i><i></i></div>':""}
       <i class="ava" style="--h:${(p.i*67)%360}">${lead?'<b class="crown-i" title="الأعلى رصيد">👑</b>':""}${(p.name||"?").trim().charAt(0)}${isDealer?'<b class="dlr" title="الموزّع">D</b>':""}</i>
       <span class="nm">${esc(p.name)}</span>
-      <span class="chipbal num">${fmt(p.chips)}</span>
-      <span class="betchip ${p.bet?"on":""} num">${p.bet?fmt(p.bet):"—"}</span>
+      <span class="chipbal num">${money(p.chips)}</span>
+      <span class="betchip ${p.bet?"on":""} num">${p.bet?money(p.bet):"—"}</span>
       ${show?`<div class="mini">${p.hand.map(c=>cardEl(c,true,false)).join("")}</div>
               <span class="badge b-in">${PROJ[p.eval.cat]}</span>`
             : seatBadge(p,turn)}
@@ -1934,7 +1949,7 @@ function render(){
     if(p.bet>0&&!p.out){                       // الفيش قدّامه باتجاه القدر (يبان على الشاشات العريضة)
       const k=.55;
       const nb=_lastBet[p.i]!==p.bet;
-      html.push(`<div class="betspot ${S.boss===p.i?"boss":""} ${nb?"new":""}" data-i="${p.i}" style="left:${50+(x-50)*k}%;top:${50+(y-50)*k}%"><i></i>${fmt(p.bet)}</div>`);
+      html.push(`<div class="betspot ${S.boss===p.i?"boss":""} ${nb?"new":""}" data-i="${p.i}" style="left:${50+(x-50)*k}%;top:${50+(y-50)*k}%"><i></i>${money(p.bet)}</div>`);
     }
   }
   $("seats").innerHTML=html.join("");
@@ -1943,7 +1958,7 @@ function render(){
   if(desk)placeBets(ringEl);
   drawBubbles();
 
-  $("pot").textContent=fmt(Math.max(0,...S.players.map(p=>p.bet)));
+  $("pot").textContent=money(Math.max(0,...S.players.map(p=>p.bet)));
   $("potLabel").textContent = S.phase==="betting" ? "أعلى مراهنة" : "التقسيمة";
   $("youName").textContent=S.mode==="bots"?"ورقك":`ورق ${v.name}`;
   $("myChips").textContent=(leadC!==null&&!v.out&&v.chips===leadC?"👑 ":"")+fmt(v.chips);
@@ -1983,7 +1998,7 @@ function render(){
     tb.className="turn dagesh";
     tb.innerHTML=`<b>${dw?((dw.i===S.viewer&&!isSpec())?"انت داقشت!":esc(dw.name)+" داقش!"):"داقش!"}</b><span>الكل يقلب ورقه</span>`;
   }else if(S.phase==="done"||S.phase==="over"){
-    tb.className="turn quiet"; tb.innerHTML=`<b>انتهت الجولة</b><span>القدر انوزّع</span>`;
+    tb.className="turn quiet"; tb.innerHTML=`<b>انتهت الجولة</b><span>الجولة الجاية تبدأ لحالها</span>`;
   }else if(t>=0){
     const p=S.players[t], mine=t===S.viewer;
     tb.className="turn"+(mine?" mine":"");
@@ -2013,13 +2028,33 @@ function render(){
   // عدّاد الجاهزين داخل شاشة الكشف
   const rd=$("rdy");
   if(rd){
-    const ri=readyInfo(), got=ri.need.filter(k=>ri.has.has(k)).length;
-    rd.textContent=(isOnline()&&S.phase==="done"&&ri.need.length>1)
-      ? `جاهزين ${got} من ${ri.need.length} — نبدأ لما يضغط الكل، أو تلقائياً بعد ٢٥ ثانية` : "";
+    const a=autoNext();
+    rd.innerHTML=a?`<span>${S.overPending?"النتيجة النهائية بعد لحظات…":"الجولة الجاية تبدأ لحالها…"}</span>${autoBar(a)}`:"";
   }
   actions();
 }
 
+/* زر "اشرح لي": الشرح التفصيلي للمبتدئين، والخبير يشوف المهم بس */
+let HELP=(()=>{try{return localStorage.getItem("dagesh-help")==="1"}catch(e){return false}})();
+function toggleHelp(){ HELP=!HELP; try{localStorage.setItem("dagesh-help",HELP?"1":"0")}catch(e){} if(S)render(); }
+/* الجولة الجاية تبدأ لحالها — ٥ ثواني بعد الجولة العادية، و١٠ بعد الكشف عشان تلحقون تشوفون الورق.
+   كل جهاز يعلن إنه جاهز لحاله، والمضيف يبدأ لما يجهز الكل (أو بعد ٢٥ ثانية لو أحد نايم) */
+let AUTO={k:"",at:0,ms:0};
+function autoNext(){
+  if(!S||S.phase!=="done"||isSpec())return null;
+  const key=()=>(isOnline()?"on":"off")+":"+S.handNo;
+  const k=key();
+  if(AUTO.k!==k){
+    const ms=(S.rev&&S.rev.h===S.handNo)?10000:5000;
+    AUTO={k,at:Date.now()+ms,ms};
+    setTimeout(()=>{ if(AUTO.k===k&&S&&S.phase==="done"&&key()===k)act("next"); },ms);
+  }
+  return AUTO;
+}
+function autoBar(a){
+  const left=Math.max(0,a.at-Date.now());
+  return `<div class="autonext"><i style="animation-duration:${a.ms}ms;animation-delay:-${a.ms-left}ms"></i></div>`;
+}
 function actions(){
   const bar=$("actions"),v=S.players[S.viewer];
   if(isSpec()){
@@ -2032,39 +2067,39 @@ function actions(){
   const canDagesh = (S.phase==="mic"||S.phase==="offer") && v.bet>0 && !v.folded && !v.out && !S.revealed.has(v.i);
   const alwaysDagesh = canDagesh
     ? `<div class="always-dagesh"><button class="act b-pom" onclick="askDagesh('dagesh-any')">داقش الآن — اكشف الورق</button>
-       <span>تقدر تداقش في أي لحظة، حتى لو مو دورك</span></div>` : "";
-  const H=(p,c)=>bar.innerHTML=`<div class="prompt">${p}</div><div class="ctl">${c}</div>${alwaysDagesh}`;
+       ${HELP?`<span>تقدر تداقش في أي لحظة، حتى لو مو دورك</span>`:""}</div>` : "";
+  /* p = المهم بس. d = الشرح التفصيلي، يطلع لما يضغط "اشرح لي" (وينحفظ اختياره) */
+  const H=(p,c,d)=>bar.innerHTML=`<div class="prompt">${p}${d
+      ?`<button class="hintb" onclick="toggleHelp()">${HELP?"خلاص فهمت":"💡 اشرح لي"}</button>`:""}${d&&HELP
+      ?`<span class="hint">${d}</span>`:""}</div><div class="ctl">${c}</div>${alwaysDagesh}`;
 
   if(S.phase==="done"||S.phase==="over"){
     const solo=S.solo?(S.solo.i===S.viewer&&!isSpec()
         ? `الكل انسحب — <b>مراهنتك ${fmt(S.solo.amt)} صارت لك</b>. `
         : `الكل انسحب — <b>${esc(S.solo.name)}</b> أخذ مراهنته ${fmt(S.solo.amt)}. `):"";
-    if(S.phase==="done"&&isOnline()){
-      const ri=readyInfo(), got=ri.need.filter(k=>ri.has.has(k)).length;
-      if(ri.has.has(S.viewer))
-        return H(`${solo}جاهز ✓ — ننتظر الباقين (${got} من ${ri.need.length})`,"");
-      return H(`${solo}الجولة خلصت.${ri.need.length>1?` جاهزين ${got} من ${ri.need.length}.`:""}`,
-        `<button class="act b-brass" onclick="act('next')">الجولة الجاية</button>`);
-    }
-    return H(`${solo}الجولة خلصت.`,`<button class="act b-brass" onclick="act('next')">الجولة الجاية</button>`);
+    if(S.phase==="over")return H(`${solo}انتهت الجلسة.`,"");
+    const a=autoNext();
+    return H(`${solo}${S.overPending?"النتيجة النهائية بعد لحظات…":"الجولة الجاية تبدأ لحالها…"}`, a?autoBar(a):"");
   }
 
   // طلبات انسحاب معلّقة عندك كصاحب مايك
   if(S.boss===S.viewer){
     const req=bettors().find(p=>p.askOut);
-    if(req)return H(`<b>${req.name}</b> يطلب إذنك ينسحب من الجولة. لك ترفض وتجبره يكمل.`,
+    if(req)return H(`<b>${req.name}</b> يبي ينسحب من الجولة.`,
       `<button class="act b-quiet" onclick="act('answerout',{target:${req.i},ok:true})">أسمح له</button>
-       <button class="act b-pom" onclick="act('answerout',{target:${req.i},ok:false})">أرفض</button>`);
+       <button class="act b-pom" onclick="act('answerout',{target:${req.i},ok:false})">أرفض</button>`,
+      `بعد ما يراهن اللاعب ما يطلع إلا بإذنك. لك ترفض وتجبره يكمل معكم.`);
   }
   // دورك في المراهنة
   if(S.phase==="betting"&&S.order[S.turn]===S.viewer&&!v.folded&&!v.bot){
     const hb=highBet(),min=hb+STEP;
     if(v.chips<min)
-      return H(`أعلى مراهنة الحين <b>${fmt(hb)}</b> وما عندك أكثر منها. إما تنزل <b>أول-إن</b> بكل رصيدك أو تنسحب.`,
+      return H(`أعلى مراهنة <b>${fmt(hb)}</b> وما عندك أكثر منها.`,
         `<button class="act b-brass" onclick="act('bet',{amount:${v.chips}})">أول-إن ${fmt(v.chips)}</button>
-         <button class="act b-quiet" onclick="act('fold')">انسحب</button>`);
+         <button class="act b-quiet" onclick="act('fold')">انسحب</button>`,
+        `إما تنزل <b>أول-إن</b> بكل رصيدك وتكمل، أو تنسحب من الجولة.`);
     const max=Math.floor(v.chips/STEP)*STEP;
-    return H(`دورك. ${hb?`أعلى مراهنة <b>${fmt(hb)}</b>، لازم تزيد $5,000 على الأقل.`:`ابدأ المراهنة، الحد الأدنى <b>$5,000</b>.`}`,
+    return H(hb?`دورك. أعلى مراهنة <b>${fmt(hb)}</b>.`:`دورك — ابدأ المراهنة.`,
       `<div class="amt">
          <input type="range" id="rg" min="${min}" max="${max}" step="${STEP}" value="${min}"
                 aria-label="مبلغ المراهنة"
@@ -2072,7 +2107,9 @@ function actions(){
          <span class="amtval num" id="og">${fmt(min)}</span>
        </div>
        <button class="act b-brass" onclick="act('bet',{amount:+document.getElementById('rg').value})">راهن</button>
-       <button class="act b-quiet" onclick="act('fold')">انسحب</button>`);
+       <button class="act b-quiet" onclick="act('fold')">انسحب</button>`,
+      hb?`لازم تزيد <b>5,000</b> على الأقل عن أعلى مراهنة، أو تنسحب. مراهنتك رقم معلن بس — ما ينقص من محفظتك شي وانت في نص الجولة.`
+        :`الحد الأدنى <b>5,000</b>. أعلى واحد يراهن في الدورة ياخذ المايك ويقسّم مراهنته على الباقين.`);
   }
   // انت صاحب المايك
   if(S.phase==="mic"&&S.boss===S.viewer&&!v.bot){
@@ -2083,7 +2120,7 @@ function actions(){
       for(const p of list)if(p.i!==S.viewer){window._sp[p.i]=b;u+=b;}
     }
     const used=Object.values(window._sp).reduce((a,b)=>a+b,0),mine=split()-used;
-    const BIG=bigStep(), kf=n=>"$"+(n/1000)+"K";
+    const BIG=bigStep(), kf=n=>(n/1000)+"K";
     const rows=list.filter(p=>p.i!==S.viewer).map(p=>`<div class="sp-row ${BIG?"has-big":""}">
       <span class="nm">${esc(p.name)}</span>
       <div class="sp-ctl">
@@ -2093,20 +2130,22 @@ function actions(){
         <button class="stp" onclick="spAdj(${p.i},1)">+</button>
         ${BIG?`<button class="stp big" onclick="spAdj(${p.i},1,${BIG})">+${kf(BIG)}</button>`:""}
       </div></div>`).join("");
-    return H(`تقسيمتك <b>${fmt(split())}</b> — وهي مراهنتك، وتدفعها من محفظتك للي يوافق. وزّع زي ما تبي — تقدر تعطي واحد أكثر عشان يوافق. لو وافقوا كلهم، ما ينكشف ورق أحد.`,
+    return H(`تقسيمتك <b>${fmt(split())}</b> — وزّعها على اللي داخلين.`,
       `<div class="split">${rows}
         <div class="sp-row sp-mine" style="border-top:1px solid var(--rule);padding-top:7px">
           <span class="nm">حصتك</span><span class="val num">${fmt(mine)}</span></div>
-        <div class="left ${mine<0?"bad":""}">${mine<0?"التوزيع تعدّى القدر":"المجموع لازم يساوي القدر"}</div></div>
+        <div class="left ${mine<0?"bad":""}">${mine<0?"وزّعت أكثر من التقسيمة":"المجموع لازم يساوي التقسيمة"}</div></div>
        <button class="act b-brass" ${mine<0?"disabled":""} onclick="uOffer()">اعرض التقسيم</button>
-       <button class="act b-pom" onclick="askDagesh('mic-dagesh')">داقش</button>`);
+       <button class="act b-pom" onclick="askDagesh('mic-dagesh')">داقش</button>`,
+      `التقسيمة هي مراهنتك، وتدفعها من محفظتك للي يوافق. وزّع زي ما تبي — تقدر تعطي واحد أكثر عشان يوافق. لو وافقوا كلهم، ما ينكشف ورق أحد.`);
   }
   // ردّك على العرض
   if(S.phase==="offer"&&S.viewer!==S.boss&&v.resp===null&&!v.bot&&!v.folded){
-    return H(`${S.players[S.boss].name} عارض عليك <b>${fmt(v.share)}</b>. لو وافقت تدخل محفظتك على طول. ولو داقشت وكسبت تاخذ مراهنتك <b>${fmt(v.bet)}</b>، ولو خسرت تروح عليك.`,
+    return H(`${esc(S.players[S.boss].name)} عارض عليك <b>${fmt(v.share)}</b>.`,
       `<button class="act b-brass" onclick="act('resp',{r:'ok'})">أوافق ${fmt(v.share)}</button>
        <button class="act b-quiet" onclick="act('resp',{r:'no'})">أبي أكثر</button>
-       <button class="act b-quiet wrapfull" onclick="act('askout')">اطلب إذن الانسحاب</button>`);
+       <button class="act b-quiet wrapfull" onclick="act('askout')">اطلب إذن الانسحاب</button>`,
+      `لو وافقت تدخل محفظتك على طول. ولو داقشت وكسبت تاخذ مراهنتك <b>${fmt(v.bet)}</b>، ولو خسرت تروح عليك.`);
   }
   H(S.busy?"في انتظار بقية اللاعبين…":"…","");
 }
@@ -2207,8 +2246,7 @@ function revealSheet(shown,winners,over,by,byI){
   ovShow(`<div class="hero sm"><h2>${by?(byI===meSeat?"انت داقشت":esc(by)+" داقش"):"داقش"}</h2><p>${byLine}</p></div>
     ${head}
     <div class="rev">${rows}</div>
-    <p class="rdy" id="rdy"></p>
-    <button class="act b-brass wide" onclick="ovHide();act('next')">${over?"شوف النتيجة":"الجولة الجاية"}</button>`,"reveal");
+    <div class="rdy" id="rdy"></div>`,"reveal");
   if(S)render();
 }
 let RULES_BACK="setup";
@@ -2223,8 +2261,10 @@ function landingShow(h){
       cardEl({r,s},false).replace('<div class="card',`<div style="--i:${i};--a:${a}deg" class="card`)).join("");
   }
   w.hidden=false; w.scrollTop=0; lockScroll(true);
+  chatOpen(false); layoutChat();              // الدردشة تبع الجلسة — ما تضل مفتوحة بعد ما تطلع
 }
-function landingHide(){ const w=$("welcome"); if(w.hidden)return; w.hidden=true; lockScroll(false); }
+function landingHide(){ const w=$("welcome"); if(w.hidden)return; w.hidden=true; lockScroll(false);
+  AUTO.k=""; layoutChat(); }
 /* الرجوع من القواعد: للّعبة لو فيه جولة شغّالة، وإلا لشاشة البداية */
 function closeRules(){
   ovHide();
@@ -2260,10 +2300,10 @@ function rules(){
   </div>
 
   <div class="rule-sec">
-    <h3>الجولة على جزئين</h3>
+    <h3>الجولة على جزأين</h3>
     <div class="stepbox">
       <div class="sb"><b>١ · الأكشن</b>
-        <p>دورة وحدة على الطاولة. لما يجيك دورك: إما تراهن بمبلغ أعلى من اللي قبلك بـ $5,000 على الأقل،
+        <p>دورة وحدة على الطاولة. لما يجيك دورك: إما تراهن بمبلغ أعلى من اللي قبلك بـ 5,000 على الأقل،
            أو تنسحب. وإذا ودّك تلعب وما عندك أعلى منه، ما لك إلا <b>أول-إن</b> بكل رصيدك.</p>
         <p class="tip">مراهنتك رقم معلن بس — ما ينقص من محفظتك شي وانت في نص الجولة.</p></div>
       <div class="sb"><b>٢ · المناقشة</b>
@@ -2762,7 +2802,7 @@ function chatVisible(){ return !$("chatPanel").hidden; }
    لأن النافذة تغطي العمود الجانبي. */
 function layoutChat(){
   const pn=$("chatPanel"), dock=$("chatDock"); if(!pn||!dock)return;
-  const want=isDesk()&&!!(S&&S.phase);
+  const want=isDesk()&&!!(S&&S.phase)&&$("welcome").hidden;   // مو فوق الصفحة الرئيسية
   if(want){
     if(pn.parentNode!==dock)dock.appendChild(pn);
     pn.classList.add("docked"); pn.hidden=false; dock.hidden=false;
@@ -2936,7 +2976,7 @@ function joinRoom(name,code,tries,bidx){
       if(!NET||NET.seat!==null||!NET.isHost===false){}
       if(!NET||NET.seat!==null){clearInterval(poke);return;}
       if(++n>6){ clearInterval(poke);
-        netStatus("ما فيه غرفة بهذا الرمز، أو المضيف مقفل الصفحة. ولو انت فاتح نفس الغرفة على هذا الجهاز في تبويب ثاني، افتحها من جهاز غيره.",true); return; }
+        netStatus("ما فيه غرفة بهذا الرمز، أو المضيف قافل الصفحة. ولو انت فاتح نفس الغرفة على هذا الجهاز في تبويب ثاني، افتحها من جهاز غيره.",true); return; }
       trToHost({t:"hello",name});
     },2500);
     NET._poke=poke;
@@ -3188,7 +3228,7 @@ function leaveRoom(){
   ovHide(); setup();
 }
 function copyLink(btn,link){
-  const done=()=>{const t=btn.textContent;btn.textContent="اننسخ ✓";setTimeout(()=>btn.textContent=t,1600);};
+  const done=()=>{const t=btn.textContent;btn.textContent="تم النسخ ✓";setTimeout(()=>btn.textContent=t,1600);};
   if(navigator.clipboard&&navigator.clipboard.writeText)
     navigator.clipboard.writeText(link).then(done,()=>prompt("انسخ الرابط:",link));
   else prompt("انسخ الرابط:",link);
