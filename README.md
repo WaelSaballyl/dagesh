@@ -31,7 +31,6 @@ After betting you can only leave with the mic holder's permission, and they are 
 
 - **With friends.** Host a room and share the code, or send an invite link like `?room=12345` that drops people straight in. Rooms can stay private or be listed publicly for anyone to join. Up to 13 seats, with spectators and optional bots to fill empty places.
 - **Against bots.** Easy, medium or hard. Hard bots bluff and will pay to keep you quiet.
-- **Pass the phone.** 4 to 13 players sharing one device, with a privacy screen before each turn.
 
 ## Features
 
@@ -103,7 +102,6 @@ Sound effects come from **Freesound** (CC0) and **Pixabay** (Pixabay Content Lic
 
 - **مع الأصحاب.** تنشئ غرفة وترسل الرمز، أو ترسل رابط دعوة مثل `?room=12345` يُدخلهم مباشرة. الغرفة تبقى خاصة أو تظهر في قائمة الغرف المفتوحة لمن يريد الانضمام. تتسع حتى 13 لاعبًا، مع متفرجين وبوتات اختيارية لملء المقاعد الفارغة.
 - **ضد البوتات.** ثلاثة مستويات: سهل ومتوسط وصعب. البوت الصعب يبلف ويدفع لك لتسكت.
-- **مرّر الجوال.** من 4 إلى 13 لاعبًا على جهاز واحد، مع شاشة حجب قبل كل دور.
 
 ## أبرز المزايا
 
