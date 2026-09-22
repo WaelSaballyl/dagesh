@@ -1422,7 +1422,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260917-0706";
+const BUILD="20260922-0331";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -2317,6 +2317,12 @@ function showRev(r){
   NET.seenRev=r.h;
   revealSheet(r.shown,r.winners,r.over,r.by,r.byI);
 }
+/* "تمام، شفت": تسكّر الكشف وتعلن إنك جاهز. ضد البوتات تبدأ الجولة على طول،
+   وفي الغرفة تبدأ لما يجهز الكل أو بعد ٧ ثواني */
+function seenReveal(){
+  if(OVK==="reveal")ovHide();
+  if(S&&S.phase==="done"&&!isSpec())act("next");
+}
 function revealSheet(shown,winners,over,by,byI){
   /* نقارن بالمقعد مو بالكائن: عند الضيوف القائمتين توصل منفصلة،
      فكانت includes ترجع false دايماً ويطلع الكل خسران */
@@ -2342,7 +2348,8 @@ function revealSheet(shown,winners,over,by,byI){
   ovShow(`<div class="hero sm"><h2>${by?(byI===meSeat?"انت داقشت":esc(by)+" داقش"):"داقش"}</h2><p>${byLine}</p></div>
     ${head}
     <div class="rev">${rows}</div>
-    <div class="rdy" id="rdy"></div>`,"reveal");
+    <div class="rdy" id="rdy"></div>
+    <button class="act b-brass wide" onclick="seenReveal()">تمام، شفت</button>`,"reveal");
   if(S)render();
 }
 let RULES_BACK="setup";
@@ -2866,7 +2873,7 @@ function renderTyping(){
   for(const [k,v] of TYPERS){ if(v.until<now)TYPERS.delete(k); else names.push(v.name); }
   const el=$("chatTyping");
   if(el) el.textContent = !names.length ? ""
-    : names.length===1 ? `${names[0]} يكتب…`
+    : names.length===1 ? `${names[0]} ${FEMALE.has(names[0])?"تكتب":"يكتب"}…`
     : names.length===2 ? `${names[0]} و${names[1]} يكتبون…` : `${names.length} يكتبون…`;
   const fb=$("chatFab"); if(fb) fb.classList.toggle("typing", names.length>0 && !chatVisible());
   drawBubbles();
@@ -2883,6 +2890,7 @@ function chatPush(name,text){
   if(!chatVisible() && name!==(NET&&NET.me)) sfx("msg");
   renderChat();
   seatBubble(name,text);
+  if(isHost()&&!isBotName(name))botsHear(text,name);   // البوتات يردّون على البشر بس
 }
 function chatSend(){
   const el=$("chatIn"); if(!el)return;
@@ -2891,7 +2899,7 @@ function chatSend(){
     el.value="";
     LOCALCHAT.push({name:myChatName(),text:t.slice(0,160),id:LOCALCHAT.length+1});
     if(LOCALCHAT.length>40)LOCALCHAT.shift();
-    renderChat(); seatBubble(myChatName(),t); el.focus(); return;
+    renderChat(); seatBubble(myChatName(),t); botsHear(t,myChatName()); el.focus(); return;
   }
   if(!NET)return;
   el.value="";
@@ -2900,6 +2908,117 @@ function chatSend(){
         NET.chat=(NET.chat||[]).concat([{name:NET.me,text:t.slice(0,160)}]);
         renderChat(); seatBubble(NET.me,t); }   // نوريها له على طول بدل ما ينتظر ردّة المضيف
   el.focus();
+}
+/* ---------- البوتات يردّون في الدردشة ----------
+   كل بوت له لهجة: جداوي أو نجدي. يرد بعد ما "يكتب" شوي زي البشر، واللي انذكر اسمه يرد أول.
+   ما يردّون على كل رسالة لو أحد يرسل ورا بعض. في الغرف: المضيف بس يشغّلهم. */
+const HIJAZI=new Set(["فيصل","منى","عبدالملك","ريم","هيا","ماجد"]);
+const FEMALE=new Set(["نورة","منى","ريم","لطيفة","هيا"]);
+const nrm=t=>String(t).toLowerCase()
+  .replace(/[ً-ْـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي")
+  .replace(/(.)\1{2,}/g,"$1$1");
+const INTENTS=[
+  ["salam", /سلام عليكم|^ *(ال)?سلام *$/],
+  ["greet", /(^| )(هلا|هلو|اهلين|اهلا|مرحبا|مرحبتين|هاي|صباح|مساء|مسا ال)|^(hi|hello|hey)/],
+  ["howru", /كيفك|كيف حالك|كيف الحال|وشلونك|شلونك|علومك|اخبارك|وش الاخبار|ايش الاخبار|عساك طيب/],
+  ["thanks",/شكرا|مشكور|يعطيك العافيه|تسلم|الله يعطيك|thanks|thx/],
+  ["praise",/كفو|عاش|وحش|اسطوره|ذيب|بطل|يا حلو|احبك/],
+  ["taunt", /بلوف|تبلف|يبلف|بلف|خايف|جبان|تخاف|خوفت|ترجف|اعرفك|كذاب|تكذب/],
+  ["dagesh",/داقش|اداقش|بداقش|نداقش|حداقش/],
+  ["cards", /وش معك|ايش معك|ايش معاك|وش عندك|ايش عندك|ورقك|اوراقك|وريني|ورني/],
+  ["lose",  /خسرت|خسران|حظي|الحظ|ظلم|غش|تغشون|نصب|مو عدل/],
+  ["money", /فلوس|مليون|الف|رصيد|فزت|ربحت|كسبت/],
+  ["hurry", /يلا|يالله|بسرعه|استعجل|طولت|نايم|وينك|وين انت/],
+  ["rude",  /غبي|حمار|تافه|سخيف|اسكت|انقلع|وجع|خايس|ثقيل/],
+  ["bye",   /باي|مع السلامه|تصبح|بطلع|بنام|اشوفكم/],
+  ["laugh", /هه|هاها|خخ|😂|🤣|lol|haha/],
+];
+/* {{مؤنث|مذكر}} تنقلب حسب البوت */
+const BOTSAY={
+  salam:{ nj:["وعليكم السلام ورحمة الله","وعليكم السلام، هلا والله","وعليكم السلام، حيّ الله من جا"],
+          hj:["وعليكم السلام، أهلين","وعليكم السلام ورحمة الله، منوّر","وعليكم السلام يا هلا"] },
+  greet:{ nj:["هلا والله","هلا وغلا","يا هلا","هلا بك","حيّاك"],
+          hj:["أهلين","هلا والله","يا هلا يا هلا","أهلًا أهلًا","منوّر"] },
+  howru:{ nj:["بخير الله يسلمك، وأنت؟","الحمد لله، وش علومك أنت؟","زين، بس الورق ما هو معي اليوم","بخير، ركّز باللعب بس"],
+          hj:["تمام الحمد لله، وانت كيفك؟","بخير، بس الحظ زعلان مني شوية","ماشي الحال، إنت كيفك؟","كويس الحمد لله"] },
+  thanks:{ nj:["العفو","حيّاك","ما سوينا شي","الله يعافيك"],
+           hj:["العفو يا شيخ","ولا يهمك","على إيش؟","تسلم"] },
+  praise:{ nj:["كفو عليك","الله يسلمك","تستاهل","هذا من ذوقك"],
+           hj:["تسلم يا شيخ","إنت الأحلى","يا حبيبي تسلم","من ذوقك والله"] },
+  taunt:{ nj:["أنا أبلف؟ جرّب وداقش وتشوف","اللي {{خايفة|خايف}} يطلع، أنا {{قاعدة|قاعد}}","لا تحاول، ما تمشي علي","بلوف ولا مو بلوف؟ داقش وتعرف","الورق يتكلم مو أنا"],
+          hj:["أنا؟ لا يا شيخ، ورقي نظيف","إيش بلوف؟ إنت اللي ترجف","جرّب وشوف بنفسك","لا تخاف مني، خاف من ورقي","تبغى تعرف؟ داقش وخلاص"] },
+  dagesh:{ nj:["داقش إن كان فيك خير","داقش ولا تناقش","تهددني؟ داقش خلنا نشوف","لا تستعجل على الداقش","إذا داقشت لا تزعل بعدين"],
+           hj:["يلا داقش، {{مستنية|مستني}}","داقش ولا تناقش يا عم","بس كلام؟ داقش لو تقدر","لا تندم بعدين","حداقشك قبل ما تداقشني"] },
+  cards:{ nj:["لو قلت لك وش بقى من اللعب؟","ورقي سر، داقش وشوف","شي يفرح... لي أنا","ما بقول، بس انتبه لنفسك","وش معك أنت أول؟"],
+          hj:["إيش دخلك؟ ههههه","سر يا حبيبي","قول إنت أول إيش معاك","ورق حلو مره، بس ما حقول","لا لا، ما في كلام كده"] },
+  lose:{ nj:["هذي اللعبة، يوم لك ويوم عليك","لا تزعل، الجاية لك","ما فيه غش، الورق ما يكذب","صبرك، تتعدل"],
+         hj:["معليش، دي اللعبة","لا تزعل يا شيخ، الجاية أحلى","مافي غش والله، الحظ بس","خلاص روّق، لسه بدري"] },
+  money:{ nj:["المليون قريب إن شاء الله","الفلوس تجي وتروح","لا تفرح، الجولة ما خلصت","ترى الرصيد يتغير بجولة وحدة"],
+          hj:["الفلوس دي حقتي دحين","مليون؟ خليك واقعي","لا تحسبها قبل ما تقبضها","إن شاء الله نوصل المليون كلنا"] },
+  hurry:{ nj:["أبشر، ثواني","لا تستعجل علي","أفكر، اصبر شوي","هدّ علينا شوي"],
+          hj:["طيب لحظة","إيش فيك مستعجل؟","خلاص دحين","يا عم روّق"] },
+  rude:{ nj:["الله يسامحك","ما عليه، نتفاهم بالورق","كلامك ما يغيّر ورقي","هدّ اللعب شوي"],
+         hj:["يا شيخ الله يهديك","روّق، دي لعبة","ههههه ماشي","ما حرد عليك، الورق يرد"] },
+  bye:{ nj:["في أمان الله","الله معك","لا تطول علينا"],
+        hj:["مع السلامة","الله معاك","لا تتأخر علينا"] },
+  laugh:{ nj:["ههههههه","ضحّكتني","ههههه والله إنك رايق","اضحك اضحك، الجولة الجاية نشوف"],
+          hj:["ههههههههه","ههههه يا شيخ","ههه والله إنك فاضي","إضحك إضحك، دحين تشوف"] },
+  ask:{ nj:["والله ما أدري","يمكن، الله أعلم","وش رايك أنت؟","شوف الورق وأنت تعرف"],
+        hj:["والله ما أدري","ممكن، ليش لا","إيش رأيك إنت؟","سؤال حلو، ما عندي جواب"] },
+  misc:{ nj:["صادق","إيه والله","ركّز باللعب ههه","مضبوط","طيب","خلنا نلعب"],
+         hj:["صح كلامك","أيوه","مره","والله","طيب يا شيخ","يلا نكمل"] },
+  mic:{ nj:["المايك معي، اصبروا علي","خلوني أقسّم على راحتي","لا أحد يستعجلني، المايك معي"],
+        hj:["المايك عندي، روّقوا","دحين أقسّم، لحظة","المايك معايا، استنوا شوية"] },
+  folded:{ nj:["أنا {{طالعة|طالع}} هالجولة، أتفرج بس","طلعت، أشوف وش تسوون"],
+           hj:["أنا {{طالعة|طالع}} الجولة دي، بتفرّج","انسحبت، بشوف إيش حتسوّوا"] },
+};
+let BOTLAST=0; const BOTUSED=new Map();
+function isBotName(n){ return !!(S&&S.players&&S.players.some(p=>p.bot&&p.name===n)); }
+function botLine(p,intent){
+  const d=HIJAZI.has(p.name)?"hj":"nj";
+  let pool=(BOTSAY[intent]||BOTSAY.misc)[d];
+  if(["misc","taunt","dagesh","cards","hurry"].includes(intent)&&Math.random()<.5){
+    if(S.boss===p.i&&(S.phase==="mic"||S.phase==="offer")) pool=BOTSAY.mic[d];
+    else if(p.folded&&["betting","mic","offer"].includes(S.phase)) pool=BOTSAY.folded[d];
+  }
+  const used=BOTUSED.get(p.name)||[];                      // ما يكرر نفسه
+  let opts=pool.filter(x=>!used.includes(x)); if(!opts.length)opts=pool;
+  const line=opts[(Math.random()*opts.length)|0];
+  used.push(line); if(used.length>8)used.shift(); BOTUSED.set(p.name,used);
+  return line.replace(/\{\{([^|}]*)\|([^}]*)\}\}/g,(_,f,m)=>FEMALE.has(p.name)?f:m);
+}
+function botsHear(text,from){
+  if(!S||!S.players||!S.phase||S.phase==="over")return;
+  if(isOnline()&&!isHost())return;
+  const bots=S.players.filter(p=>p.bot&&!p.out); if(!bots.length)return;
+  const t=nrm(text);
+  let intent="misc";
+  for(const [k,re] of INTENTS) if(re.test(t)){ intent=k; break; }
+  if(intent==="misc"&&/[؟?]/.test(text)) intent="ask";
+  const named=bots.filter(p=>t.includes(nrm(p.name)));
+  const now=Date.now();
+  if(!named.length&&now<BOTLAST&&intent!=="salam")return;   // لسا يردّون على اللي قبلها
+  const who=named.slice(0,2), rest=bots.filter(p=>!who.includes(p)).sort(()=>Math.random()-.5);
+  const want=(intent==="salam"||intent==="greet") ? 1+((Math.random()*3)|0) : (Math.random()<.3?2:1);
+  while(who.length<want&&rest.length)who.push(rest.shift());
+  const sess=S; let at=500+Math.random()*900;
+  for(const p of who){
+    const line=botLine(p,intent), typeMs=700+line.length*55+Math.random()*700, start=at, key="bot"+p.i;
+    setTimeout(()=>{ if(S!==sess)return;
+      TYPERS.set(key,{name:p.name,until:Date.now()+typeMs+800}); renderTyping(); setTimeout(renderTyping,typeMs+900);
+      if(isOnline()&&isHost())broadcast({t:"typing",cid:key,name:p.name});
+    },start);
+    setTimeout(()=>{ if(S!==sess||p.out)return; TYPERS.delete(key); botPost(p.name,line); },start+typeMs);
+    at=start+typeMs+400+Math.random()*1200;
+  }
+  BOTLAST=now+at;
+}
+function botPost(name,text){
+  if(isOnline()){ if(isHost())chatPush(name,text); return; }
+  LOCALCHAT.push({name,text,id:LOCALCHAT.length+1});
+  if(LOCALCHAT.length>40)LOCALCHAT.shift();
+  if(!chatVisible())sfx("msg");
+  typingDone(name); renderChat(); seatBubble(name,text);
 }
 let CHATSEEN=0, LOCALCHAT=[];
 /* ضد البوتات أو تمرير الجوال ما فيه غرفة، فالرسائل تنحفظ هنا على جهازك */
@@ -2958,7 +3077,7 @@ function renderChat(){
   if(!list.length){
     box.innerHTML = isOnline()
       ? `<p class="empty">ما فيه رسائل بعد.<br>اكتب شي لأصحابك.</p>`
-      : `<p class="empty">اكتب اللي تبي وجرّب الدردشة.<br>البوتات ما يردّون — بس رسالتك تطلع فوق مقعدك.</p>`;
+      : `<p class="empty">اكتب شي، والبوتات يردّون عليك.<br>وكل رسالة تطلع فوق مقعد صاحبها.</p>`;
   }else{
     /* لو كان اللاعب طالع فوق يقرأ القديم ما نزعجه، وإلا ننزل لآخر رسالة */
     const stick = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
