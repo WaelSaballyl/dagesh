@@ -1174,9 +1174,44 @@ select.pick:focus,.field input:focus{border-color:var(--brass)}
   .lb-row.mine .lb-nm::after{content:""}
 }
 @media (min-width:900px) and (orientation:landscape){
-  .lb{--lbw:clamp(170px,17vw,230px)}
+  .lb{--lbw:clamp(160px,14vw,215px)}
 }
 @media (prefers-reduced-motion:reduce){.lb-row{transition:none}}
+
+/* ===== طاولة ومقاعد أكبر على اللاب ===== */
+@media (min-width:900px) and (orientation:landscape){
+  .table-wrap{padding:0}
+  .felt{inset:7%}
+  .seat{width:122px;padding:7px 6px 6px;gap:2px}
+  .ring.tight .seat{width:108px}
+  .seat .ava{width:44px;height:44px;font-size:18px}
+  .seat .nm{font-size:15px}
+  .seat .chipbal{font-size:12px}
+  .seat .badge{font-size:10.5px;padding:2px 8px}
+  .seat .mini{height:34px}
+  .seat .mini .card.sm{width:24px;height:34px}
+  .core .val{font-size:50px}
+  .core .lbl{font-size:14px}
+  .core .ph{font-size:12.5px;max-width:320px}
+  .betspot{font-size:15px;padding:4px 12px 4px 5px}
+  .betspot i{width:20px;height:20px}
+  .dock-in{padding:8px 0 10px}
+  .myrow .hand .card{width:64px;height:92px}
+}
+
+/* ===== اللاب: المقعد لوحة عرضية (الصورة يمين والكلام جنبها) — أكبر للعين وأقصر بالطول ===== */
+@media (min-width:900px) and (orientation:landscape){
+  .ring:not(.dense) .seat{display:grid;grid-template-columns:auto auto;column-gap:10px;row-gap:1px;
+    align-items:center;justify-items:start;width:auto;min-width:150px;max-width:200px;padding:6px 12px 6px 14px;text-align:start}
+  .ring:not(.dense) .seat .ava{grid-row:1/span 3;grid-column:1;width:48px;height:48px;font-size:19px}
+  .ring:not(.dense) .seat>*:not(.ava):not(.dgtag):not(.backs){grid-column:2}
+  .ring:not(.dense) .seat .nm{font-size:15.5px;line-height:1.25;max-width:120px}
+  .ring:not(.dense) .seat .chipbal{font-size:12.5px;line-height:1.2}
+  .ring:not(.dense) .seat .badge{font-size:10.5px;padding:2px 8px}
+  .ring:not(.dense) .seat .mini{justify-content:flex-start}
+  .ring.tight:not(.dense) .seat{min-width:136px;padding:7px 10px}
+  .ring.tight:not(.dense) .seat .ava{width:40px;height:40px;font-size:16px}
+}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -1719,7 +1754,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260922-0504";
+const BUILD="20260922-0523";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
