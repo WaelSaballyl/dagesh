@@ -1756,7 +1756,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260922-0713";
+const BUILD="20260922-1124";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -3316,6 +3316,7 @@ const INTENTS=[
   ["sorry",   /اسف|سوري|sorry|معليش|المعذره|سامحني|سامحوني/],
   ["thanks",  /شكرا|مشكور|يعطيك العافيه|يعطيكم العافيه|تسلم|الله يعطيك|thanks|thx|جزاك/],
   ["bye",     /باي|مع السلامه|تصبح|تصبحون|بطلع|بروح|بنام|نعسان|نعست|اشوفكم|bye/],
+  ["maker",   /مين سوا|من سوا|مين مسوي|مين صمم|من صمم|مين المبرمج|من المبرمج|مين سواها|مين عملها|صاحب اللعبه|مطور اللعبه|مين صاحب الموقع|مين مطورها/],
   ["rules",   /كيف العب|كيف نلعب|وش القوانين|ايش القوانين|القواعد|وش يعني داقش|ايش يعني داقش|وش المايك|ايش المايك|ما فهمت اللعبه|وش الفكره/],
   ["split",   /قسم|تقسيم|التقسيمه|حصتي|نصيبي|عطني|اعطني|زود|زيدني/],
   ["allin",   /اول ان|اولن|all ?in|كل فلوسي|بحط كل|حطيت كل/],
@@ -3351,6 +3352,7 @@ const INTENTS=[
   ["laugh",   /هه|هاها|خخ|^يي|😂|🤣|😆|lol|haha|ضحكت/],
 ];
 const EMOJI=[[/[😡🤬😤]/u,"angry"],[/[👍👌✅]/u,"ack"],[/[❤😍🥰😘]/u,"praise"],[/[🤔]/u,"ask"],[/[😭😢💔]/u,"lose"]];
+const OWNER=/^(وائل|وايل|ويلو|ويل|wael|willo|wail|waell)$/i;   // أسماء صاحب اللعبة
 let BOTLAST=0; const BOTUSED=new Map();
 function isBotName(n){ return !!(S&&S.players&&S.players.some(p=>p.bot&&p.name===n)); }
 function botIntent(text){
@@ -3450,6 +3452,8 @@ const BOTSAY={
              hj:["صباح الفل","صباح النور يا شيخ","صباحو، فين الفطور؟"] },
   evening:{ nj:["مساء النور","مساء الورد، حيّاك","مسا النور، جيت وقت الوناسة"],
             hj:["مساء الفل","مساء النور يا شيخ","مسا الخير، منوّر"] },
+  maker:{ nj:["وائل مسويها، ترى صاحبنا","عمنا وائل الله يعطيه العافية","وائل اللي سواها من الصفر","وائل، ومنها يحسب نفسه محترف ههه"],
+          hj:["وائل يا شيخ، دا صاحبنا","عمنا وائل الله يعافيه","وائل اللي سواها كلها","وائل، ومنها صاير يتفلسف علينا ههههه"] },
   rules:{ nj:["بسيطة: راهن، واللي معه أعلى مراهنة يقسّم، ولو ما عجبك داقش","كل واحد معه أربع ورقات، واللي يشك يداقش وتنكشف","اضغط اشرح لي تحت، يشرح لك كل خطوة"],
           hj:["سهلة يا شيخ: راهن، وصاحب المايك يقسّم، ولو شاكك داقش","المايك لأعلى واحد راهن، وهو يوزّع الفلوس","دوس على اشرح لي تحت، يفهّمك كل شي"] },
   split:{ nj:["التقسيمة عادلة وأنت عارف ههه","تبي زيادة؟ داقش وخذها بيدك","هذا اللي عندي، اقبل ولا داقش","لا تطمع، ترى الطمع يضيّع"],
@@ -3563,7 +3567,8 @@ async function botsAI(text,from,ev){
     const top=Math.max(...S.players.filter(x=>!x.out).map(x=>x.chips));
     const body={
       game:{phase:PHASEAR[S.phase]||S.phase,pot:Math.max(0,...S.players.map(p=>p.bet))},
-      from:{name:from,chips:me?me.chips:0,folded:!!(me&&me.folded),rich:!!(me&&me.chips===top&&me.chips>START)},
+      from:{name:from,chips:me?me.chips:0,folded:!!(me&&me.folded),rich:!!(me&&me.chips===top&&me.chips>START),
+            owner:OWNER.test(nrm(from||""))},   // صاحب اللعبة: يعرفونه ويحبونه
       bots:bots.map(p=>({name:p.name,dialect:HIJAZI.has(p.name)?"hj":"nj",female:FEMALE.has(p.name),
         team:BOTTEAM[p.name]||"الهلال",chips:p.chips,folded:!!p.folded,
         mic:S.boss===p.i&&(S.phase==="mic"||S.phase==="offer")})),
