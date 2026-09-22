@@ -1754,7 +1754,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260922-0523";
+const BUILD="20260922-0654";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -3536,7 +3536,7 @@ const BOTSAY={
 /* ---------- البوتات بالذكاء: يفهمون سياق كلامك ----------
    الصفحة ترسل آخر الشات ووضع الجولة لخادم صغير (Cloudflare Worker) يسأل Claude
    مين يرد وإيش يقول. لو الخادم مو شغال أو تأخر، ترجع الردود الجاهزة اللي فوق. */
-const BOTAI_URL="";          // رابط الخادم. فاضي = الردود الجاهزة بس
+const BOTAI_URL="https://dagesh-bots.dagesh-bots.workers.dev/chat";   // فاضي = الردود الجاهزة بس
 const AIQ={busy:false,again:null,fails:0};
 const PHASEAR={betting:"الأكشن، الكل يراهن أو ينسحب",mic:"المناقشة، صاحب المايك يقسّم",
   offer:"المناقشة، الكل يرد على التقسيمة",showdown:"كشف الورق",done:"الجولة خلصت"};
@@ -3553,7 +3553,7 @@ async function botsAI(text,from){
   /* وقت الانتظار: بوت "يكتب" عشان ما تحس إن محد سامعك */
   const t=nrm(text), guess=bots.find(p=>t.includes(nrm(p.name)))||bots[(Math.random()*bots.length)|0], gk="bot"+guess.i;
   const wait=setTimeout(()=>{ if(S!==sess)return;
-    TYPERS.set(gk,{name:guess.name,until:Date.now()+12000}); renderTyping();
+    TYPERS.set(gk,{name:guess.name,until:Date.now()+20000}); renderTyping();
     if(isOnline()&&isHost())broadcast({t:"typing",cid:gk,name:guess.name}); },600);
   let replies=null;
   try{
@@ -3566,7 +3566,7 @@ async function botsAI(text,from){
         team:BOTTEAM[p.name]||"الهلال",chips:p.chips,folded:!!p.folded,
         mic:S.boss===p.i&&(S.phase==="mic"||S.phase==="offer")})),
       history:chatList().slice(-14).map(m=>({name:m.name,text:m.text}))};
-    const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(),12000);
+    const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(),20000);
     const r=await fetch(BOTAI_URL,{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify(body),signal:ctl.signal});
     clearTimeout(to);
