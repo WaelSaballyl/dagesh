@@ -882,6 +882,302 @@ select.pick option{background:#14181B;color:var(--ink)}
   .wl-menu .setup-foot{margin-top:12px;padding-top:10px}
 }
 
+
+/* ================= التجميل: النحاسي للفلوس والمايك، الأحمر للداقش بس =================
+   طبقة أخيرة فوق كل اللي قبلها. */
+/* ============================================================
+   داقش — اتجاه بصري مقترح: "المجلس"
+   طبقة فوق الستايل الحالي، ما تلمس أي منطق لعب.
+   النحاسي = الفلوس والمايك. الأحمر = الداقش وبس. الأخضر = الربح وبس.
+   ============================================================ */
+
+:root{
+  /* الحبر — الدرجة الثالثة كانت 4.09:1 (تحت الحد)، صارت 6.1:1 */
+  --ink:#F0F3F1; --ink-2:#B4BCBD; --ink-3:#8A9396;
+  --paper:#0A0D0E; --paper-2:#121618; --paper-3:#1A1F22;
+  --rule:#1F2528; --rule-2:#2E363A;
+
+  /* لون واحد للفلوس والمايك */
+  --brass:#E8B45C; --brass-ink:#1A1205; --brass-soft:#231A0C; --brass-line:#7A5B22;
+  /* الأحمر للداقش وبس */
+  --accent:#E0616C; --accent-soft:#2A1417; --accent-line:#8C3A42;
+  --gain:#57C795; --gain-soft:#0F2620;
+  --warn:var(--brass); --warn-soft:var(--brass-soft);
+
+  /* سلّم المسافات */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  --r:10px;
+}
+
+/* ---------- تايبوغرافي ----------
+   العربي حروفه موصولة: أي letter-spacing يفكّها ويصعّب القراءة.
+   شلناها من كل النصوص العربية، وكبّرنا الملصقات الصغيرة. */
+.bar .sub,.core .lbl,.rail h3,.opt label,.field label,.stat,.chip,
+.chatpanel.docked .cp-head b{letter-spacing:normal!important}
+.core .lbl{font-size:12px;font-weight:600;color:rgba(255,255,255,.7)}
+.rail h3{font-size:12.5px;font-weight:700;color:var(--ink-2);font-family:"Alexandria",sans-serif}
+.opt label,.field label{font-size:12px;font-weight:600;color:var(--ink-2)}
+.stat{font-size:11.5px;color:var(--ink-3)}
+.bar .sub{font-size:12px;color:var(--ink-3)}
+body{font-size:15px;line-height:1.6}
+.num,.seat .chipbal,.seat .betchip,.core .val,.amtval,.betspot,
+.row b,.sp-row .val{font-variant-numeric:tabular-nums lining-nums}
+
+/* ---------- الترويسة ---------- */
+.bar{border-bottom:1px solid var(--rule);padding:12px 0 10px;gap:10px}
+.bar h1{font-size:25px}
+.tbtn{height:36px;display:inline-flex;align-items:center;gap:6px;padding:0 13px;
+  border-radius:99px;border:1px solid var(--rule-2);color:var(--ink-2);font-size:13px}
+.tbtn:hover{border-color:var(--ink-3);color:var(--ink);background:var(--paper-2)}
+.tbtn.on{background:var(--brass);border-color:var(--brass);color:var(--brass-ink)}
+.tbtn svg{width:17px;height:17px;display:block}
+.chatbtn{padding:0 11px}
+.cf-b{background:var(--accent)}
+
+/* ---------- المرحلة ودور مين ---------- */
+.stage{border-color:var(--rule);border-radius:99px}
+.step{background:var(--paper-2);padding:9px 14px}
+.step b{background:var(--paper-3);color:var(--ink-3)}
+.step span{font-size:12px;color:var(--ink-3)}
+.step.on{background:var(--brass-soft)}
+.step.on b{background:var(--brass);color:var(--brass-ink)}
+.step.on span{color:var(--brass);font-weight:700}
+#turnbar b{font-size:22px}
+#turnbar.mine b{color:var(--brass)}
+#turnbar.mine::after{background:var(--brass)}
+#turnbar span{color:var(--ink-3);font-size:13px}
+
+/* ---------- الطاولة ----------
+   جوخ أهدأ وحافة أرفع: الطاولة خلفية، واللاعبين هم اللي يبينون. */
+.felt{
+  background:
+    radial-gradient(ellipse 72% 68% at 50% 38%,#1E6449 0%,#165440 44%,#0E3A2C 78%,#0A2A20 100%);
+  box-shadow:0 0 0 6px #241A12,0 0 0 7px rgba(255,255,255,.05),
+             0 24px 70px rgba(0,0,0,.6),inset 0 0 90px rgba(0,0,0,.55)}
+.felt::before{inset:9% 7%;border:1px solid rgba(255,255,255,.055)}
+.core .val{font-size:34px;letter-spacing:-.02em}
+.core .ph{color:rgba(255,255,255,.6);font-size:11.5px}
+
+/* المقاعد: صحن خفيف بدل الصندوق — نفس القراءة بنص الوزن البصري */
+.seat{background:rgba(6,10,9,.62);border:1px solid rgba(255,255,255,.06);border-radius:16px;
+  box-shadow:none;padding:7px 6px 6px;backdrop-filter:blur(2px)}
+.seat .nm{font-size:12.5px;color:var(--ink)}
+.seat .chipbal{color:#A7AFB1;font-size:10.5px}
+.seat .ava{border-width:2px}
+.seat.mine{background:rgba(30,14,16,.62);border-color:rgba(224,97,108,.45)}
+/* الدور: هالة نحاسية بدل صندوق مليان */
+.seat.turn{background:rgba(6,10,9,.72);border-color:var(--brass);
+  box-shadow:0 0 0 4px rgba(232,180,92,.18),0 0 26px rgba(232,180,92,.22)}
+.seat.turn .nm{color:#fff}
+.seat.dim{opacity:.55}
+.seat.dim .nm{color:var(--ink-2)}
+/* المراهنة: فيشة نحاسية تحت الاسم. واللي ما راهن ما يطلع له شرطة فاضية */
+.seat .betchip{font-size:13px;color:var(--ink-3)}
+.seat .betchip:not(.on){display:none}
+.seat .betchip.on{color:var(--brass-ink);background:var(--brass);border-radius:99px;
+  padding:1px 9px;font-size:12px;line-height:1.45}
+.badge{font-size:9.5px;padding:2px 7px;border-radius:99px;font-weight:700}
+.b-mic{background:var(--accent);color:#fff}
+.b-turn{background:var(--brass);color:var(--brass-ink)}
+.b-in{background:rgba(87,199,149,.16);color:var(--gain)}
+.b-out{background:rgba(255,255,255,.07);color:var(--ink-3)}
+.b-wait{border-color:rgba(255,255,255,.16);color:var(--ink-3)}
+.seat.lead .ava{border-color:var(--brass);box-shadow:0 0 0 2px rgba(232,180,92,.2)}
+.seat.lead .chipbal{color:var(--brass)}
+.ava .crown-i{top:-13px;font-size:13px}
+.ava .crown-i svg{width:15px;height:15px;display:block;color:var(--brass);
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
+.betspot{background:rgba(0,0,0,.55);border-color:rgba(232,180,92,.28);font-size:13px}
+.betspot.boss{background:rgba(232,180,92,.22);border-color:var(--brass);color:#fff}
+.dgtag{background:var(--accent);box-shadow:0 2px 10px rgba(224,97,108,.45)}
+
+/* ---------- شريط الأفعال ----------
+   زر واحد أساسي بلون الفلوس، والباقي هادي. */
+button.act{border-radius:12px;font-size:15px;font-weight:700;padding:13px 20px}
+.b-brass{background:var(--brass);color:var(--brass-ink)}
+.b-brass:hover{filter:brightness(1.06)}
+.b-pom{background:var(--accent);color:#fff}
+.b-quiet{border-color:var(--rule-2);color:var(--ink-2);background:var(--paper-2)}
+.b-quiet:hover{border-color:var(--ink-3);color:var(--ink)}
+.amtval{color:var(--brass);background:var(--paper-2);border-color:var(--rule-2);
+  border-radius:12px;font-size:23px}
+input[type=range]::-webkit-slider-runnable-track{height:10px;
+  background:linear-gradient(90deg,var(--brass) 0%,var(--brass) var(--fill,0%),
+             var(--paper-3) var(--fill,0%),var(--paper-3) 100%);border-color:var(--rule-2)}
+input[type=range]::-webkit-slider-thumb{width:34px;height:34px;margin-top:-13px;
+  background:var(--brass);border:3px solid var(--paper);
+  box-shadow:0 2px 10px rgba(0,0,0,.6)}
+.prompt{font-size:14px;color:var(--ink-2)}
+.prompt b{color:var(--brass);font-weight:700}
+.hintb{border-radius:99px;border-color:var(--rule-2);color:var(--ink-3);font-size:12px;
+  display:inline-flex;align-items:center;gap:5px}
+.hintb:hover{border-color:var(--brass);color:var(--brass)}
+.hintb svg{width:13px;height:13px}
+.prompt .hint{border-inline-start-color:var(--brass);background:var(--brass-soft);font-size:13px}
+.project{color:var(--brass)}
+.mymeta .stat b{color:var(--ink)}
+.myrow{border-bottom-color:var(--rule)}
+
+/* ---------- السجل والدردشة ---------- */
+.logbox p,.row{border-bottom-color:var(--rule);font-size:12.5px}
+/* الدردشة فعل ثانوي: ما تاخذ لون الفلوس */
+.chatrow .b-brass,.chatdock .b-brass{background:var(--paper-3);color:var(--ink);
+  border:1px solid var(--rule-2)}
+.chatrow .b-brass:hover{border-color:var(--ink-3)}
+.logbox p.dg{color:var(--accent)}
+.chatbox p.mine b{color:var(--brass)}
+.chatrow input:focus{border-color:var(--brass)}
+.chatbox{background:var(--paper-2);border-radius:12px}
+
+/* ---------- النوافذ ---------- */
+.sheet{border:1px solid var(--rule-2);border-radius:18px}
+.sheet h2{font-size:26px}
+/* الاختيار حالة، مو فعل: يتلوّن بهدوء والزر الأساسي يبقى هو الأعلى صوتاً */
+.segs button[aria-pressed="true"]{background:rgba(232,180,92,.14);border-color:var(--brass);
+  color:var(--brass);font-weight:700}
+select.pick:focus,.field input:focus{border-color:var(--brass)}
+.field input.code,#fCode{border-color:var(--rule-2)}
+#fCode:focus{border-color:var(--brass)}
+.roomcode{border-color:var(--brass);color:var(--brass)}
+.linky{color:var(--brass)}
+.rejoin{border-color:var(--brass-line);background:var(--brass-soft)}
+.rejoin span b{color:var(--brass)}
+.rule-goal{background:var(--brass-soft);border-color:var(--brass-line)}
+.sb{border-inline-start-color:var(--brass)}
+.modes button[aria-pressed="true"]{background:rgba(232,180,92,.13);border-color:var(--brass)}
+.modes button[aria-pressed="true"] b{color:var(--brass)}
+.modes button[aria-pressed="true"] span{color:var(--ink-2)}
+.modes button b{font-size:14px}
+.win-banner{background:var(--gain-soft);border-color:var(--gain)}
+
+/* ---------- الصفحة الرئيسية ---------- */
+.welcome{background:radial-gradient(115% 72% at 50% 20%,#1B302A 0%,#112320 42%,#0A100F 74%,#060908 100%)}
+.wl-menu{background:rgba(7,11,10,.78);border-color:rgba(255,255,255,.07);border-radius:20px;
+  box-shadow:0 24px 70px rgba(0,0,0,.45)}
+.wl-menu .b-brass{background:var(--brass);color:var(--brass-ink);
+  box-shadow:0 10px 26px rgba(232,180,92,.18)}
+.wl-pts b{font-family:"Alexandria",sans-serif}
+.wl-pts i.r{color:var(--accent)}
+.panel-card{border-radius:14px;border-color:var(--rule)}
+.pc-head b{font-size:16.5px}
+
+/* ---------- الجوال ----------
+   المقعد اللي تحت كان يركب على ورقك: خلّينا للطاولة هامش سفلي. */
+@media not all and (min-width:900px) and (orientation:landscape){
+  /* مساحة فوق وتحت الطاولة: المقعد اللي فوق ما يغطي سطر الدور،
+     واللي تحت ما يركب على ورقك */
+  .table-wrap{padding-block:34px 24px}
+  #turnbar{padding:4px 0}
+  .myrow .hand .card{width:45px;height:64px}
+  .felt{inset:12%}
+  /* مقاعد أصغر: الطاولة تتنفس والجوخ يبان */
+  .seat{width:72px;padding:5px 4px 4px;gap:1px}
+  .seat .ava{width:30px;height:30px;font-size:13px}
+  .seat .nm{font-size:11.5px}
+  .seat .chipbal{font-size:10px}
+  .seat .badge{font-size:9px;padding:1px 6px}
+  .seat .betchip.on{font-size:11.5px;padding:1px 8px}
+  .core .val{font-size:27px}
+  .core .lbl{font-size:11px}
+  button.act{padding:12px 16px;font-size:14.5px}
+  .amtval{font-size:21px;min-width:100px}
+  /* الترويسة ما تزيد عن عرض الشاشة */
+  .bar{height:56px;gap:8px}
+  .bar h1{font-size:21px}
+  .tbtn{height:32px;padding:0 10px;font-size:12px}
+  .tbtn svg{width:16px;height:16px}
+  .chatbtn,#bMute{padding:0 9px}
+}
+
+/* ---------- اللابتوب ---------- */
+@media (min-width:900px) and (orientation:landscape){
+  .felt{inset:12%}
+  .felt::after{top:78%;color:rgba(255,255,255,.07);
+    font:800 clamp(16px,3cqh,32px) "Alexandria",sans-serif}
+  .core .val{font-size:42px}
+  .seat .nm{font-size:13.5px}
+  .seat .chipbal{font-size:11.5px}
+  .rail{border-inline-start-color:var(--rule)}
+  /* الأزرار ما تطلع برّا شريط الأفعال */
+  #actions{overflow-x:hidden}
+  #actions .ctl>button.act{min-width:132px;padding:12px 18px}
+  #actions .ctl:has(.amt)>button.act{min-width:120px}
+}
+
+/* ---------- الدردشة: خط أكبر وأوضح ---------- */
+.chatbox{font-size:15px;padding:6px 12px}
+.chatbox p{font-size:15px;line-height:1.75;padding:8px 0;color:#D9DFDC;border-bottom-color:rgba(255,255,255,.06)}
+.chatbox p b{display:inline;font:600 14px "Alexandria",sans-serif;color:#F2F5F3;margin-inline-end:8px}
+.chatbox p.mine b{color:var(--brass)}
+.chatbox .empty{font-size:14px}
+.chatrow input{font-size:16px;padding:12px 14px;border-radius:12px}
+.typing{font-size:12.5px}
+.bubble{font-size:13.5px;line-height:1.5;padding:7px 12px;border-radius:14px}
+.chatpanel.docked .cp-head b{font-size:13px!important;color:var(--ink-2)!important;font-family:"Alexandria",sans-serif!important}
+/* ---------- الصفحة الرئيسية: الوضعين بالنص ---------- */
+.modes{grid-template-columns:1fr 1fr}
+.modes button{align-items:center;text-align:center;padding:14px 12px}
+
+/* ===== الترتيب على اليمين ===== */
+.table-wrap{position:relative}
+.lb{position:absolute;inset-inline-start:0;top:50%;transform:translateY(-50%);z-index:6;
+  width:var(--lbw,210px);pointer-events:none}
+.lb:empty{display:none}
+.lb-row{position:absolute;inset-inline:0;top:0;display:flex;align-items:center;gap:10px;
+  padding:0 12px;border-radius:12px;background:rgba(12,16,15,.86);
+  border:1px solid rgba(255,255,255,.08);box-shadow:0 6px 18px rgba(0,0,0,.35);
+  transition:transform .75s cubic-bezier(.22,1,.36,1),background .3s,border-color .3s,box-shadow .3s,opacity .3s;
+  will-change:transform}
+.lb-n{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;
+  font:700 11.5px "Alexandria",sans-serif;background:rgba(255,255,255,.07);color:var(--ink-2)}
+.lb-n svg{width:15px;height:15px}
+.lb-nm{flex:1;min-width:0;font:600 14px "Alexandria",sans-serif;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-amt{flex:none;font:800 14.5px "Alexandria",sans-serif;color:#DDE3E0;direction:ltr;
+  font-variant-numeric:tabular-nums}
+.lb-amt.up{animation:lbUp .9s ease}
+.lb-amt.dn{animation:lbDn .9s ease}
+@keyframes lbUp{0%{color:#6BE0A6;text-shadow:0 0 12px rgba(107,224,166,.6)}}
+@keyframes lbDn{0%{color:#FF8A94}}
+.lb-row.mine{border-color:rgba(224,106,117,.55);background:rgba(40,18,21,.9)}
+.lb-row.mine:not(.you) .lb-nm::after{content:" (أنت)";font:500 11px "IBM Plex Sans Arabic",sans-serif;color:var(--ink-3)}
+.lb-row.out{opacity:.45}
+/* الأول: إطار ذهبي متدرّج وتاج ولمعة */
+.lb-row.top{background:linear-gradient(180deg,rgba(52,40,14,.96),rgba(30,23,8,.96)) padding-box,
+    linear-gradient(135deg,#FFE7A0,#E8B84A 40%,#9C6E1C 70%,#FFE7A0) border-box;
+  border:2px solid transparent;box-shadow:0 0 0 3px rgba(232,184,74,.16),0 8px 26px rgba(232,184,74,.28)}
+.lb-row.top .lb-n{background:linear-gradient(135deg,#FFE7A0,#D9A437);color:#3A2705;width:26px;height:26px}
+.lb-row.top .lb-nm{color:#FFE7A0}
+.lb-row.top .lb-amt{color:#FFD86B}
+.lb-row.top::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(110deg,transparent 30%,rgba(255,236,170,.22) 50%,transparent 70%);
+  background-size:250% 100%;animation:lbShine 3.2s ease-in-out infinite}
+@keyframes lbShine{0%{background-position:130% 0}60%,100%{background-position:-130% 0}}
+.lb-row.crowned .lb-n{animation:lbCrown .8s cubic-bezier(.3,1.6,.4,1)}
+@keyframes lbCrown{0%{transform:scale(.2) rotate(-40deg)}}
+.lb.compact .lb-nm{font-size:12px}.lb.compact .lb-amt{font-size:12.5px}
+.lb.compact .lb-n{width:18px;height:18px;font-size:10px}
+/* الجوال: عمود ضيق على اليمين والطاولة تاخذ الباقي */
+@media not all and (min-width:900px) and (orientation:landscape){
+  .table-wrap{padding-inline-start:104px}
+  .lb{--lbw:98px}
+  .lb-row{flex-wrap:wrap;align-content:center;row-gap:0;column-gap:6px;padding:0 8px;border-radius:10px}
+  .lb-n{width:17px;height:17px;font-size:9.5px}
+  .lb-row.top .lb-n{width:19px;height:19px}
+  .lb-n svg{width:12px;height:12px}
+  .lb-nm{font-size:12px}
+  .lb-amt{flex-basis:100%;font-size:12.5px;text-align:start;line-height:1.1}
+  .lb.compact .lb-row{flex-wrap:nowrap;padding:0 6px}
+  .lb.compact .lb-amt{flex-basis:auto;font-size:10.5px}
+  .lb.compact .lb-nm{font-size:10.5px}
+  .lb.compact .lb-n{display:none}
+  .lb-row.mine .lb-nm::after{content:""}
+}
+@media (min-width:900px) and (orientation:landscape){
+  .lb{--lbw:clamp(170px,17vw,230px)}
+}
+@media (prefers-reduced-motion:reduce){.lb-row{transition:none}}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -915,8 +1211,8 @@ select.pick option{background:#14181B;color:var(--ink)}
     <span class="sub">لعبة مساومة</span>
     <nav>
       <button class="tbtn chatbtn" id="chatFab" hidden title="الدردشة" onclick="chatOpen(true)"
-        >💬<span class="cf-b" id="chatBadge" hidden>0</span></button>
-      <button class="tbtn" id="bMute" title="الصوت">🔉</button>
+        ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1.2-4.2A8 8 0 1 1 21 12z"/></svg><span class="cf-b" id="chatBadge" hidden>0</span></button>
+      <button class="tbtn" id="bMute" title="الصوت"></button>
       <button class="tbtn" id="bRules">القواعد</button>
       <button class="tbtn" id="bNew">جلسة جديدة</button>
     </nav>
@@ -945,6 +1241,7 @@ select.pick option{background:#14181B;color:var(--ink)}
       </div>
 
       <div class="table-wrap">
+        <aside class="lb" id="lb" aria-label="الترتيب"></aside>
         <div class="ring" id="ring">
           <div class="felt"></div>
           <div class="core" id="tray">
@@ -1422,7 +1719,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260922-0331";
+const BUILD="20260922-0445";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -1459,7 +1756,8 @@ const SFXFILES=["take1","take2","take3","riffle","crackle1","crackle2","sting",
 let AC=null, BUF=Object.create(null), SFXASKED=0, MG=null;
 
 /* ثلاث درجات: هادي (الافتراضي)، عادي، صامت */
-const VOLS=[{k:"soft",g:.34,ic:"🔉"},{k:"loud",g:.66,ic:"🔊"},{k:"off",g:0,ic:"🔇"}];
+const VIC=w=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/>${w}</svg>`;
+const VOLS=[{k:"soft",g:.34,ic:VIC('<path d="M15.5 8.5a5 5 0 0 1 0 7"/>')},{k:"loud",g:.66,ic:VIC('<path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>')},{k:"off",g:0,ic:VIC('<path d="m16 9 5 6M21 9l-5 6"/>')}];
 let VOLI=(()=>{ try{ const v=localStorage.getItem("dagesh-vol");
     if(v!==null){const i=+v; if(i>=0&&i<VOLS.length)return i;}
     if(localStorage.getItem("dagesh-mute")==="1")return 2;
@@ -1581,7 +1879,7 @@ function sfx(kind){
     }
   }catch(e){}
 }
-function volIcon(){ const b=$("bMute"); if(b){ b.textContent=VOLS[VOLI].ic;
+function volIcon(){ const b=$("bMute"); if(b){ b.innerHTML=VOLS[VOLI].ic;
   b.title={soft:"صوت هادي",loud:"صوت عادي",off:"بدون صوت"}[VOLS[VOLI].k]; } }
 function toggleMute(){                       // هادي ← عادي ← صامت
   VOLI=(VOLI+1)%VOLS.length;
@@ -1920,6 +2218,55 @@ function fitSeats(ringEl,key){
   _fit[key]=sc;
 }
 /* الأعلى رصيد (بدون تعادل) — نفس القاعدة للتاج على الطاولة وفي الدردشة */
+
+/* ---------- الترتيب على اليمين ----------
+   كل لاعب له سطر ثابت، ونحرّكه بـ transform لمكانه الجديد، فلما يطلع أحد من تحت لفوق
+   ينزلق فوق الباقين. والرقم يعدّ لين يوصل المبلغ الجديد. الأول (لو فعلاً متقدّم) ياخذ تاج وإطار ذهبي. */
+const LB={rows:new Map(),shown:new Map(),key:""};
+function drawBoard(){
+  const box=$("lb"); if(!box||!S||!S.players)return;
+  const list=S.players.slice().sort((a,b)=>(a.out-b.out)||(b.chips-a.chips)||(a.i-b.i));
+  const key=S.players.map(p=>p.name).join("|");
+  if(LB.key!==key){ box.innerHTML=""; LB.rows.clear(); LB.shown.clear(); LB.key=key; }
+  const Li=leaderI(), me=S.viewer, compact=S.n>8;
+  box.classList.toggle("compact",compact);
+  const H=compact?(isDesk()?34:24):(isDesk()?50:40), gap=isDesk()?6:4;
+  box.style.height=(list.length*(H+gap)-gap)+"px";
+  list.forEach((p,rank)=>{
+    let r=LB.rows.get(p.i);
+    if(!r){
+      r=document.createElement("div"); r.className="lb-row";
+      r.innerHTML='<i class="lb-n"></i><span class="lb-nm"></span><b class="lb-amt num"></b>';
+      box.appendChild(r); LB.rows.set(p.i,r); LB.shown.set(p.i,p.chips);
+      r.style.transition="none"; r.style.transform=`translateY(${rank*(H+gap)}px)`;
+      void r.offsetWidth; r.style.transition="";
+    }
+    r.style.height=H+"px";
+    const was=r.classList.contains("top");
+    r.classList.toggle("top",p.i===Li);
+    r.classList.toggle("mine",p.i===me&&!isSpec());
+    r.classList.toggle("you",p.name==="أنت");
+    r.classList.toggle("out",!!p.out);
+    if(p.i===Li&&!was){ r.classList.remove("crowned"); void r.offsetWidth; r.classList.add("crowned"); }
+    r.style.transform=`translateY(${rank*(H+gap)}px)`;
+    r.style.zIndex=String(100-rank);
+    r.querySelector(".lb-n").innerHTML=p.i===Li?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18l1.2-10-5.2 3.6L12 4 7 11.6 1.8 8z" fill="currentColor"/></svg>':String(rank+1);
+    r.querySelector(".lb-nm").textContent=p.name;
+    countTo(r.querySelector(".lb-amt"),p.i,p.chips);
+  });
+}
+function countTo(el,i,to){
+  const from=LB.shown.has(i)?LB.shown.get(i):to;
+  if(from===to){ el.textContent=money(to); return; }
+  LB.shown.set(i,to);
+  el.classList.remove("up","dn"); void el.offsetWidth; el.classList.add(to>from?"up":"dn");
+  const t0=performance.now(), dur=700;
+  (function step(t){
+    const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
+    el.textContent=money(Math.round(from+(to-from)*e));
+    if(k<1&&LB.shown.get(i)===to)requestAnimationFrame(step);
+  })(t0);
+}
 function leaderI(){
   if(!S||!S.players)return -1;
   const al=S.players.filter(p=>!p.out).slice().sort((a,b)=>b.chips-a.chips);
@@ -2020,7 +2367,7 @@ function render(){
       data-i="${p.i}" style="left:${x}%;top:${y}%">
       ${dgd?'<span class="dgtag">داقش</span>':""}
       ${backs?'<div class="backs"><i></i><i></i><i></i><i></i></div>':""}
-      <i class="ava" style="--h:${(p.i*67)%360}">${lead?'<b class="crown-i" title="الأعلى رصيد">👑</b>':""}${(p.name||"?").trim().charAt(0)}${isDealer?'<b class="dlr" title="الموزّع">D</b>':""}</i>
+      <i class="ava" style="--h:${(p.i*67)%360}">${lead?'<b class="crown-i" title="الأعلى رصيد"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18l1.2-10-5.2 3.6L12 4 7 11.6 1.8 8z" fill="currentColor"/></svg></b>':""}${(p.name||"?").trim().charAt(0)}${isDealer?'<b class="dlr" title="الموزّع">D</b>':""}</i>
       <span class="nm">${esc(p.name)}</span>
       <span class="chipbal num">${money(p.chips)}</span>
       <span class="betchip ${p.bet?"on":""} num">${p.bet?money(p.bet):"—"}</span>
@@ -2037,6 +2384,7 @@ function render(){
   $("seats").innerHTML=html.join("");
   for(const p of S.players)_lastBet[p.i]=p.bet;
   fitSeats(ringEl,[nn,RW,RH,desk,S.revealed.size,ringEl.classList.contains("dense")].join("|"));
+  drawBoard();
   if(desk)placeBets(ringEl);
   drawBubbles();
 
@@ -2166,7 +2514,7 @@ function actions(){
        ${HELP?`<span>تقدر تداقش في أي لحظة، حتى لو مو دورك</span>`:""}</div>` : "";
   /* p = المهم بس. d = الشرح التفصيلي، يطلع لما يضغط "اشرح لي" (وينحفظ اختياره) */
   const H=(p,c,d)=>bar.innerHTML=`<div class="prompt">${p}${d
-      ?`<button class="hintb" onclick="toggleHelp()">${HELP?"خلاص فهمت":"💡 اشرح لي"}</button>`:""}${d&&HELP
+      ?`<button class="hintb" onclick="toggleHelp()">${HELP?"خلاص فهمت":`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="hb-i"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 1 3.6 10.8c-.6.5-.9 1.1-1 1.7l-.1.5h-5l-.1-.5c-.1-.6-.4-1.2-1-1.7A6 6 0 0 1 12 3z"/></svg> اشرح لي`}</button>`:""}${d&&HELP
       ?`<span class="hint">${d}</span>`:""}</div><div class="ctl">${c}</div>${alwaysDagesh}`;
 
   if(S.phase==="done"||S.phase==="over"){
@@ -2914,96 +3262,113 @@ function chatSend(){
    ما يردّون على كل رسالة لو أحد يرسل ورا بعض. في الغرف: المضيف بس يشغّلهم. */
 const HIJAZI=new Set(["فيصل","منى","عبدالملك","ريم","هيا","ماجد"]);
 const FEMALE=new Set(["نورة","منى","ريم","لطيفة","هيا"]);
+const TEAMS={ "الهلال":["الزعيم","هلالي","هلالية"], "النصر":["العالمي","نصراوي","نصراوية"],
+              "الاتحاد":["العميد","اتحادي","اتحادية"], "الأهلي":["الراقي","أهلاوي","أهلاوية"] };
+const BOTTEAM={ سعد:"الهلال",خالد:"الهلال",تركي:"الهلال",نورة:"النصر",لطيفة:"النصر",بدر:"النصر",
+                فيصل:"الاتحاد",ماجد:"الاتحاد",هيا:"الاتحاد",منى:"الأهلي",ريم:"الأهلي",عبدالملك:"الأهلي" };
 const nrm=t=>String(t).toLowerCase()
   .replace(/[ً-ْـ]/g,"").replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي")
   .replace(/(.)\1{2,}/g,"$1$1");
 const INTENTS=[
-  ["salam", /سلام عليكم|^ *(ال)?سلام *$/],
-  ["greet", /(^| )(هلا|هلو|اهلين|اهلا|مرحبا|مرحبتين|هاي|صباح|مساء|مسا ال)|^(hi|hello|hey)/],
-  ["howru", /كيفك|كيف حالك|كيف الحال|وشلونك|شلونك|علومك|اخبارك|وش الاخبار|ايش الاخبار|عساك طيب/],
-  ["thanks",/شكرا|مشكور|يعطيك العافيه|تسلم|الله يعطيك|thanks|thx/],
-  ["praise",/كفو|عاش|وحش|اسطوره|ذيب|بطل|يا حلو|احبك/],
-  ["taunt", /بلوف|تبلف|يبلف|بلف|خايف|جبان|تخاف|خوفت|ترجف|اعرفك|كذاب|تكذب/],
-  ["dagesh",/داقش|اداقش|بداقش|نداقش|حداقش/],
-  ["cards", /وش معك|ايش معك|ايش معاك|وش عندك|ايش عندك|ورقك|اوراقك|وريني|ورني/],
-  ["lose",  /خسرت|خسران|حظي|الحظ|ظلم|غش|تغشون|نصب|مو عدل/],
-  ["money", /فلوس|مليون|الف|رصيد|فزت|ربحت|كسبت/],
-  ["hurry", /يلا|يالله|بسرعه|استعجل|طولت|نايم|وينك|وين انت/],
-  ["rude",  /غبي|حمار|تافه|سخيف|اسكت|انقلع|وجع|خايس|ثقيل/],
-  ["bye",   /باي|مع السلامه|تصبح|بطلع|بنام|اشوفكم/],
-  ["laugh", /هه|هاها|خخ|😂|🤣|lol|haha/],
+  ["bot",     /بوت|روبوت|ذكاء اصطناعي|انت حقيقي|انتم حقيقيين|chatgpt|شات جي/],
+  ["salam",   /سلام عليكم|^ *(ال)?سلام *$/],
+  ["greet",   /(^| )(هلا|هلو|اهلين|اهلا|مرحبا|مرحبتين|هاي|صباح|مساء|مسا|هاو)|^(hi|hello|hey|yo)/],
+  ["howru",   /كيفك|كيفكم|كيف حال|كيف الحال|وشلون|شلون|علومك|علومكم|اخبارك|اخباركم|الاخبار|عساك|وش مسوين|ايش مسوين/],
+  ["sorry",   /اسف|سوري|sorry|معليش|المعذره|سامحني|سامحوني/],
+  ["thanks",  /شكرا|مشكور|يعطيك العافيه|يعطيكم العافيه|تسلم|الله يعطيك|thanks|thx|جزاك/],
+  ["bye",     /باي|مع السلامه|تصبح|تصبحون|بطلع|بروح|بنام|نعسان|نعست|اشوفكم|bye/],
+  ["bored",   /مليت|طفش|زهق|ملل|ممل/],
+  ["food",    /جوعان|جعت|عشا|غدا|فطور|قهوه|شاي|شاهي|اكل|مطعم|بيتزا|شاورما|برجر|كبسه/],
+  ["football",/هلال|نصر|اتحاد|اهلي|مباراه|ماتش|دوري|كوره|رونالدو|ميسي|نيمار|بنزيما/],
+  ["rude",    /غبي|حمار|تافه|سخيف|اسكت|انقلع|انطم|انكتم|وجع|خايس|ثقيل|قليل ادب|كلب|حيوان|تبن/],
+  ["taunt",   /بلوف|تبلف|يبلف|بلف|خايف|جبان|تخاف|خوفت|ترجف|اعرفك|كذاب|تكذب|بكاش|تهايط|هياط|تستهبل/],
+  ["dagesh",  /داقش|اداقش|بداقش|نداقش|حداقش|يداقش|تداقش/],
+  ["cards",   /وش معك|ايش معك|ايش معاك|وش عندك|ايش عندك|ورقك|اوراقك|وريني|ورني|ورقتك|مشروعك|رباعيه|ثلاثيه|دبل/],
+  ["brag",    /فزت|ربحت|كسبت|انا الملك|انا الذيب|محد يقدر|ما احد يقدر|شفتوا|اكلتكم|اكلتك|سحقتكم|خذيت/],
+  ["lose",    /خسرت|خسران|خسرنا|ظلم|غش|تغشون|نصب|مو عدل|حرام عليكم|افلست|مفلس|طفران/],
+  ["luck",    /حظ|يا رب|يارب|توفيق|دعواتكم/],
+  ["money",   /فلوس|مليون|الف|رصيد|دراهم|ريال|غني|فقير/],
+  ["hurry",   /يلا|يالله|بسرعه|استعجل|طولت|نايم|وينك|وين انت|وينكم|تحرك|دورك/],
+  ["angry",   /معصب|عصبت|زعلت|زعلان|نرفزت|قهر|فشلت/],
+  ["praise",  /كفو|عاش|وحش|اسطوره|ذيب|بطل|يا حلو|احبك|حبيبي|ابداع|فنان/],
+  ["agree",   /^(صح|صدق|صادق|اكيد|ايوه|ايوا|اي والله|ايه|بالضبط|مضبوط|فعلا)|صح كلامك|صدقت/],
+  ["disagree",/^(لا|لاء|مستحيل|ابد|مب|ما اظن|كذب)( |$)/],
+  ["ack",     /^(اوك|اوكي|ok|okay|تمام|طيب|ماشي|حلو|زين|k)( |$)/],
+  ["laugh",   /هه|هاها|خخ|^يي|😂|🤣|😆|lol|haha|ضحكت/],
 ];
-/* {{مؤنث|مذكر}} تنقلب حسب البوت */
-const BOTSAY={
-  salam:{ nj:["وعليكم السلام ورحمة الله","وعليكم السلام، هلا والله","وعليكم السلام، حيّ الله من جا"],
-          hj:["وعليكم السلام، أهلين","وعليكم السلام ورحمة الله، منوّر","وعليكم السلام يا هلا"] },
-  greet:{ nj:["هلا والله","هلا وغلا","يا هلا","هلا بك","حيّاك"],
-          hj:["أهلين","هلا والله","يا هلا يا هلا","أهلًا أهلًا","منوّر"] },
-  howru:{ nj:["بخير الله يسلمك، وأنت؟","الحمد لله، وش علومك أنت؟","زين، بس الورق ما هو معي اليوم","بخير، ركّز باللعب بس"],
-          hj:["تمام الحمد لله، وانت كيفك؟","بخير، بس الحظ زعلان مني شوية","ماشي الحال، إنت كيفك؟","كويس الحمد لله"] },
-  thanks:{ nj:["العفو","حيّاك","ما سوينا شي","الله يعافيك"],
-           hj:["العفو يا شيخ","ولا يهمك","على إيش؟","تسلم"] },
-  praise:{ nj:["كفو عليك","الله يسلمك","تستاهل","هذا من ذوقك"],
-           hj:["تسلم يا شيخ","إنت الأحلى","يا حبيبي تسلم","من ذوقك والله"] },
-  taunt:{ nj:["أنا أبلف؟ جرّب وداقش وتشوف","اللي {{خايفة|خايف}} يطلع، أنا {{قاعدة|قاعد}}","لا تحاول، ما تمشي علي","بلوف ولا مو بلوف؟ داقش وتعرف","الورق يتكلم مو أنا"],
-          hj:["أنا؟ لا يا شيخ، ورقي نظيف","إيش بلوف؟ إنت اللي ترجف","جرّب وشوف بنفسك","لا تخاف مني، خاف من ورقي","تبغى تعرف؟ داقش وخلاص"] },
-  dagesh:{ nj:["داقش إن كان فيك خير","داقش ولا تناقش","تهددني؟ داقش خلنا نشوف","لا تستعجل على الداقش","إذا داقشت لا تزعل بعدين"],
-           hj:["يلا داقش، {{مستنية|مستني}}","داقش ولا تناقش يا عم","بس كلام؟ داقش لو تقدر","لا تندم بعدين","حداقشك قبل ما تداقشني"] },
-  cards:{ nj:["لو قلت لك وش بقى من اللعب؟","ورقي سر، داقش وشوف","شي يفرح... لي أنا","ما بقول، بس انتبه لنفسك","وش معك أنت أول؟"],
-          hj:["إيش دخلك؟ ههههه","سر يا حبيبي","قول إنت أول إيش معاك","ورق حلو مره، بس ما حقول","لا لا، ما في كلام كده"] },
-  lose:{ nj:["هذي اللعبة، يوم لك ويوم عليك","لا تزعل، الجاية لك","ما فيه غش، الورق ما يكذب","صبرك، تتعدل"],
-         hj:["معليش، دي اللعبة","لا تزعل يا شيخ، الجاية أحلى","مافي غش والله، الحظ بس","خلاص روّق، لسه بدري"] },
-  money:{ nj:["المليون قريب إن شاء الله","الفلوس تجي وتروح","لا تفرح، الجولة ما خلصت","ترى الرصيد يتغير بجولة وحدة"],
-          hj:["الفلوس دي حقتي دحين","مليون؟ خليك واقعي","لا تحسبها قبل ما تقبضها","إن شاء الله نوصل المليون كلنا"] },
-  hurry:{ nj:["أبشر، ثواني","لا تستعجل علي","أفكر، اصبر شوي","هدّ علينا شوي"],
-          hj:["طيب لحظة","إيش فيك مستعجل؟","خلاص دحين","يا عم روّق"] },
-  rude:{ nj:["الله يسامحك","ما عليه، نتفاهم بالورق","كلامك ما يغيّر ورقي","هدّ اللعب شوي"],
-         hj:["يا شيخ الله يهديك","روّق، دي لعبة","ههههه ماشي","ما حرد عليك، الورق يرد"] },
-  bye:{ nj:["في أمان الله","الله معك","لا تطول علينا"],
-        hj:["مع السلامة","الله معاك","لا تتأخر علينا"] },
-  laugh:{ nj:["ههههههه","ضحّكتني","ههههه والله إنك رايق","اضحك اضحك، الجولة الجاية نشوف"],
-          hj:["ههههههههه","ههههه يا شيخ","ههه والله إنك فاضي","إضحك إضحك، دحين تشوف"] },
-  ask:{ nj:["والله ما أدري","يمكن، الله أعلم","وش رايك أنت؟","شوف الورق وأنت تعرف"],
-        hj:["والله ما أدري","ممكن، ليش لا","إيش رأيك إنت؟","سؤال حلو، ما عندي جواب"] },
-  misc:{ nj:["صادق","إيه والله","ركّز باللعب ههه","مضبوط","طيب","خلنا نلعب"],
-         hj:["صح كلامك","أيوه","مره","والله","طيب يا شيخ","يلا نكمل"] },
-  mic:{ nj:["المايك معي، اصبروا علي","خلوني أقسّم على راحتي","لا أحد يستعجلني، المايك معي"],
-        hj:["المايك عندي، روّقوا","دحين أقسّم، لحظة","المايك معايا، استنوا شوية"] },
-  folded:{ nj:["أنا {{طالعة|طالع}} هالجولة، أتفرج بس","طلعت، أشوف وش تسوون"],
-           hj:["أنا {{طالعة|طالع}} الجولة دي، بتفرّج","انسحبت، بشوف إيش حتسوّوا"] },
-};
+const EMOJI=[[/[😡🤬😤]/u,"angry"],[/[👍👌✅]/u,"ack"],[/[❤😍🥰😘]/u,"praise"],[/[🤔]/u,"ask"],[/[😭😢💔]/u,"lose"]];
 let BOTLAST=0; const BOTUSED=new Map();
 function isBotName(n){ return !!(S&&S.players&&S.players.some(p=>p.bot&&p.name===n)); }
-function botLine(p,intent){
-  const d=HIJAZI.has(p.name)?"hj":"nj";
-  let pool=(BOTSAY[intent]||BOTSAY.misc)[d];
-  if(["misc","taunt","dagesh","cards","hurry"].includes(intent)&&Math.random()<.5){
-    if(S.boss===p.i&&(S.phase==="mic"||S.phase==="offer")) pool=BOTSAY.mic[d];
-    else if(p.folded&&["betting","mic","offer"].includes(S.phase)) pool=BOTSAY.folded[d];
+function botIntent(text){
+  const t=nrm(text);
+  for(const [k,re] of INTENTS) if(re.test(t)) return k;
+  for(const [re,k] of EMOJI) if(re.test(text)) return k;
+  if(/[؟?]/.test(text)||/^(ليش|ليه|متى|كيف|وش|ايش|مين|فين|وين|هل) /.test(t)) return "ask";
+  return "misc";
+}
+function botLine(p,intent,from,other){
+  const d=HIJAZI.has(p.name)?"hj":"nj", fem=FEMALE.has(p.name);
+  const me=S.players.find(x=>x.name===from&&!x.bot), live=["betting","mic","offer"].includes(S.phase);
+  let k=intent, r=Math.random();
+  if(["misc","taunt","dagesh","cards","hurry","brag"].includes(intent)&&r<.5){
+    if(S.boss===p.i&&(S.phase==="mic"||S.phase==="offer")) k="mic";
+    else if(p.folded&&live) k="folded";
   }
-  const used=BOTUSED.get(p.name)||[];                      // ما يكرر نفسه
-  let opts=pool.filter(x=>!used.includes(x)); if(!opts.length)opts=pool;
+  if(k===intent&&me){
+    const top=Math.max(...S.players.filter(x=>!x.out).map(x=>x.chips));
+    if(me.folded&&live&&["misc","taunt","dagesh","brag","money"].includes(intent)&&Math.random()<.45) k="uFold";
+    else if(["misc","money","brag"].includes(intent)&&Math.random()<.35){
+      if(me.chips===top&&me.chips>START) k="uRich"; else if(me.chips<START*.4) k="uPoor";
+    }
+  }
+  const uname=(from&&from!=="أنت")?from:"";
+  const tm=BOTTEAM[p.name]||"الهلال", T=TEAMS[tm];
+  const ok=x=>(uname||!x.includes("{u}"))&&(other||!x.includes("{b}"));
+  const pool=(BOTSAY[k]||BOTSAY.misc)[d].filter(ok);
+  const used=BOTUSED.get(p.name)||[];
+  let opts=pool.filter(x=>!used.includes(x)); if(!opts.length)opts=pool.length?pool:BOTSAY.misc[d];
   const line=opts[(Math.random()*opts.length)|0];
-  used.push(line); if(used.length>8)used.shift(); BOTUSED.set(p.name,used);
-  return line.replace(/\{\{([^|}]*)\|([^}]*)\}\}/g,(_,f,m)=>FEMALE.has(p.name)?f:m);
+  used.push(line); if(used.length>12)used.shift(); BOTUSED.set(p.name,used);
+  return line.replace(/\{\{([^|}]*)\|([^}]*)\}\}/g,(_,f,m)=>fem?f:m)
+    .replace(/\{u\}/g,uname).replace(/\{b\}/g,other||"").replace(/\{team\}/g,tm)
+    .replace(/\{nick\}/g,T[0]).replace(/\{fan\}/g,fem?T[2]:T[1]);
 }
 function botsHear(text,from){
   if(!S||!S.players||!S.phase||S.phase==="over")return;
   if(isOnline()&&!isHost())return;
   const bots=S.players.filter(p=>p.bot&&!p.out); if(!bots.length)return;
-  const t=nrm(text);
-  let intent="misc";
-  for(const [k,re] of INTENTS) if(re.test(t)){ intent=k; break; }
-  if(intent==="misc"&&/[؟?]/.test(text)) intent="ask";
+  const intent=botIntent(text), t=nrm(text);
   const named=bots.filter(p=>t.includes(nrm(p.name)));
   const now=Date.now();
-  if(!named.length&&now<BOTLAST&&intent!=="salam")return;   // لسا يردّون على اللي قبلها
+  if(!named.length&&now<BOTLAST&&intent!=="salam")return;     // لسا يردّون على اللي قبلها
   const who=named.slice(0,2), rest=bots.filter(p=>!who.includes(p)).sort(()=>Math.random()-.5);
-  const want=(intent==="salam"||intent==="greet") ? 1+((Math.random()*3)|0) : (Math.random()<.3?2:1);
+  const want=(intent==="salam"||intent==="greet")?1+((Math.random()*3)|0):(Math.random()<.3?2:1);
   while(who.length<want&&rest.length)who.push(rest.shift());
+  const chimeOK=!["salam","greet","howru","thanks","sorry","bye","ack"].includes(intent);
+  const plan=[];
+  who.forEach((p,k)=>{
+    const o=bots.filter(x=>x!==p), other=o.length?o[(Math.random()*o.length)|0].name:"";
+    /* لو الكلام موجّه لبوت باسمه، الثاني ما يرد نفس الرد: يعلّق عليه بس */
+    if(k>0&&named.length&&!named.includes(p)){
+      if(!chimeOK)return;
+      const d=HIJAZI.has(p.name)?"hj":"nj";
+      plan.push([p,BOTSAY.chime[d][(Math.random()*BOTSAY.chime[d].length)|0].replace(/\{b\}/g,plan[0][0].name)]);
+      return;
+    }
+    let line=botLine(p,intent,from,other), tries=0;
+    while(plan.some(x=>x[1]===line)&&tries++<6) line=botLine(p,intent,from,other);
+    if(!plan.some(x=>x[1]===line)) plan.push([p,line]);
+  });
+  if(!plan.length)return;
+  /* أحياناً بوت ثاني يعلّق على رد صاحبه — زي أي قروب */
+  if(chimeOK&&plan.length===1&&rest.length&&Math.random()<.25){
+    const c=rest[0], d=HIJAZI.has(c.name)?"hj":"nj";
+    let l=BOTSAY.chime[d][(Math.random()*BOTSAY.chime[d].length)|0].replace(/\{b\}/g,plan[0][0].name);
+    plan.push([c,l]);
+  }
   const sess=S; let at=500+Math.random()*900;
-  for(const p of who){
-    const line=botLine(p,intent), typeMs=700+line.length*55+Math.random()*700, start=at, key="bot"+p.i;
+  for(const [p,line] of plan){
+    const typeMs=700+line.length*55+Math.random()*700, start=at, key="bot"+p.i;
     setTimeout(()=>{ if(S!==sess)return;
       TYPERS.set(key,{name:p.name,until:Date.now()+typeMs+800}); renderTyping(); setTimeout(renderTyping,typeMs+900);
       if(isOnline()&&isHost())broadcast({t:"typing",cid:key,name:p.name});
@@ -3013,6 +3378,74 @@ function botsHear(text,from){
   }
   BOTLAST=now+at;
 }
+/* {{مؤنث|مذكر}} حسب البوت. {u} اسمك، {b} بوت ثاني، {team}/{nick}/{fan} فريقه */
+const BOTSAY={
+  salam:{ nj:["وعليكم السلام ورحمة الله وبركاته","وعليكم السلام، هلا والله بالزين","وعليكم السلام، حيّ الله من جا","وعليكم السلام، وينك من زمان؟","وعليكم السلام، اقعد اقعد الورق يستناك","وعليكم السلام، هلا {u}"],
+          hj:["وعليكم السلام، أهلين أهلين","وعليكم السلام ورحمة الله، منوّر المجلس","وعليكم السلام يا هلا، فينك من زمان؟","وعليكم السلام، تعال اقعد جنبي","وعليكم السلام يا {u}، نوّرت"] },
+  greet:{ nj:["هلا والله","هلا وغلا","يا هلا ويا مرحبا","هلا بك، حيّاك","هلا هلا، جيت وقت الربح","هلا والله بـ{u}","هلا، وش جابك؟ الفلوس؟ ههه"],
+          hj:["أهلين","يا هلا يا هلا","هلا والله، منوّر","أهلًا أهلًا، تعال","يا مرحبا، دحين صار فيه وناسة","هلا {u}، فينك؟","وي، مين جا؟ هلا والله"] },
+  howru:{ nj:["بخير الله يسلمك، وأنت وش علومك؟","الحمد لله، بس الورق اليوم زعلان علي","زين، وأزين لو داقشت أحد","تمام، ما عندي إلا الورق وأنتم","الحمد لله على كل حال، وأنت؟","ماشي الحال، والرصيد يسلّم عليك"],
+          hj:["تمام الحمد لله، وانت كيفك؟","بخير، بس الحظ زعلان مني شوية","ماشي الحال، إنت كيفك؟","كويس، بس جيبي فاضي ههههه","الحمد لله، دحين أحسن بعد ما شفتك","مره تمام، وانت؟"] },
+  sorry:{ nj:["ما عليه، ولا يهمك","أفا عليك، ما صار شي","سامحناك، بس بشرط تنسحب الجاية ههه","عادي، صفحة جديدة"],
+          hj:["ولا يهمك يا شيخ","معليش عادي","خلاص مسامحينك، بس لا تعيدها ههه","ولا شي، روّق"] },
+  thanks:{ nj:["العفو","حيّاك","ما سوينا شي","الله يعافيك","أبد واجبنا","لا تشكرني، ادفع ههه"],
+           hj:["العفو يا شيخ","ولا يهمك","على إيش؟","تسلم","الله يسلمك","حاضرين، بس الفلوس ما فيها مجاملة ههه"] },
+  bye:{ nj:["في أمان الله","الله معك","لا تطول علينا","تو الناس! وين رايح؟","اطلع اطلع، بس الفلوس تبقى هنا ههه","تصبح على خير"],
+        hj:["مع السلامة","الله معاك","لا تتأخر علينا","بدري! فين رايح؟","طيب بس سيب الفلوس هنا ههههه","يلا باي، لا تنسانا"] },
+  bored:{ nj:["طفشان؟ داقش أحد وتنبسط","الملل يروح أول ما تخسر ههه","ودّك نزيد الرهان؟ الحين تصحى","قم سوّ لك قهوة وارجع","يا رجال الحين الحماس بيبدأ"],
+          hj:["زهقان؟ داقش وحتصحصح","إيش الطفش دا، العب بس","خلاص دحين نسخّنها","قوم جيب شاهي وتعال","راهن كبير وشوف كيف حتصحى"] },
+  food:{ nj:["جوعان؟ اطلب كبسة وعزمنا","القهوة علي، بس الورق عليك ههه","ودي بفنجال الحين والله","الغدا على اللي يخسر الجولة","صبّ لي معك"],
+         hj:["جوعان؟ أبغى شاورما معاك","دحين تذكرت إني ما أكلت","الشاهي على الخسران","هات بيتزا ونكمل","لا تفتح موضوع الأكل الله يخليك"] },
+  football:{ nj:["{team} {nick} وأنت عارف","{fan} وأفتخر، وش عندك؟","لا تفتح موضوع الكورة، الحين نتضارب ههه","خلنا بالورق، الكورة تفرّق الربع","مين تشجع؟ لا تقول غير {team} ههه"],
+             hj:["{team} {nick} ولا نقاش","أنا {fan} من يومي","دا الكلام اللي يفتح جبهة ههههه","يا شيخ خلينا في الورق، الكورة تزعّل","إنت مين تشجع؟ لو مو {team} لا تكلمني ههه"] },
+  rude:{ nj:["الله يسامحك","ما عليه، نتفاهم بالورق","كلامك ما يغيّر ورقي","هيّن هيّن، الجولة الجاية أوريك","لا تصول، ترى ما صار شي","يا رجال ترفّق فينا ههه","اللي يعصب يخسر، قاعدة"],
+         hj:["يا شيخ الله يهديك","روّق، دي لعبة","ههههه ماشي","ما حرد عليك، الورق يرد","وي! إيش دا الكلام؟","اتلهّى يا شيخ ههههه","كدا؟ طيب، الجولة الجاية تشوف"] },
+  taunt:{ nj:["أنا أبلف؟ جرّب وداقش وتشوف","اللي {{خايفة|خايف}} يطلع، أنا {{قاعدة|قاعد}}","لا تحاول، ما تمشي علي","بلوف ولا مو بلوف؟ داقش وتعرف","خل عنك الهياط وداقش","وش دراك؟ يمكن معي رباعية ههه","كلامك كثير وفلوسك قليلة","لا تدرعم، ترى تندم"],
+          hj:["أنا؟ لا يا شيخ، ورقي نظيف","إيش بلوف؟ إنت اللي ترجف","لا تخاف مني، خاف من ورقي","تبغى تعرف؟ داقش وخلاص","بكاش؟ أنا؟ ههههه عيب عليك","دا إنت أكبر بكاش في الطاولة","شكلك خايف يا واد ههههه","قلبك قوي؟ داقش"] },
+  dagesh:{ nj:["داقش إن كان فيك خير","داقش ولا تناقش","تهددني؟ داقش خلنا نشوف","إذا داقشت لا تزعل بعدين","لا تدرعم على الداقش، اصبر","كل مرة تقول بداقش وما تداقش ههه","الداقش يبي قلب، عندك قلب؟"],
+           hj:["يلا داقش، {{مستنية|مستني}}","داقش ولا تناقش يا عمي","بس كلام؟ داقش لو تقدر","حداقشك قبل ما تداقشني","إنت تداقش؟ ههههه ورني","دحين حنشوف مين الصادق ومين البكاش","داقش وخلّصنا، ترا طوّلت"] },
+  cards:{ nj:["لو قلت لك وش بقى من اللعب؟","ورقي سر، داقش وشوف","شي يفرح... لي أنا","ما بقول، بس انتبه لنفسك","وش معك أنت أول؟","معي ورق يخليك تنسحب لو شفته","ورقي؟ مثل وجهي، حلو ههههه"],
+          hj:["إيش دخلك؟ ههههه","سر يا حبيبي","قول إنت أول إيش معاك","ورق حلو مره، بس ما حقول","معايا شي يخليك تبكي","ورقي زي القمر، بس ما حوريك","تبغى تشوف؟ داقش يا شيخ"] },
+  brag:{ nj:["لا تفرح بدري، الجولة ما خلصت","هيّن، الجاية نتفاهم","مبروك، بس ترى الحظ يدور","تحسب نفسك ذيب؟ ههه","فزت جولة وسويت نفسك بطل","هياط هياط، خلنا نشوف الجاية"],
+         hj:["مبروك يا شيخ، بس لا تكبّرها","وي، فاز جولة وصار ملك ههههه","خلاص عاد، جولة وحدة","دحين حنرجّع فلوسنا","شاطر، بس الجاية حقتي","يا حبيبي كلنا فزنا مرة ههه"] },
+  lose:{ nj:["هذي اللعبة، يوم لك ويوم عليك","لا تزعل، الجاية لك","ما فيه غش، الورق ما يكذب","صبرك، تتعدل","من يلعب يخسر، ومن يخسر يتعلم ههه","لا تبكي، نعطيك سلفة ههه"],
+         hj:["معليش، دي اللعبة","لا تزعل يا شيخ، الجاية أحلى","مافي غش والله، الحظ بس","خلاص روّق، لسه بدري","يا حرام ههههه، بس معليش","خسرت؟ أحسن، الفلوس جاتنا","الدنيا دوّارة، الجاية إنت"] },
+  luck:{ nj:["الحظ للي يداقش","يا رب، بس لي أنا مو لك ههه","الحظ ما يكفي، لازم مخ","الحظ اليوم مع {b} مو معنا"],
+         hj:["الحظ يحب الشاطرين","يا رب، بس الجولة دي لي","أدعيلك، بس بعد ما أفوز","الحظ يجي مع الجريئين"] },
+  money:{ nj:["المليون قريب إن شاء الله","الفلوس تجي وتروح","ترى الرصيد يتغير بجولة وحدة","فلوسك؟ الحين تصير فلوسي ههه","لا تحسب الفلوس على الطاولة","ودي بمليون وأطلع أرتاح"],
+          hj:["الفلوس دي حقتي دحين","مليون؟ خليك واقعي","لا تحسبها قبل ما تقبضها","فلوسك في أمان عندي ههههه","الفلوس تحب اللي يداقش","لو وصلت المليون أعزمكم كلكم"] },
+  hurry:{ nj:["أبشر، ثواني","لا تستعجل علي","أفكر، اصبر شوي","طيب طيب، لا تدرعم","العجلة من الشيطان ههه","ترى أحسب، مو نايم"],
+          hj:["طيب لحظة","إيش فيك مستعجل؟","خلاص دحين","يا عم روّق","مستعجل على إيش؟ الخسارة؟ ههههه","لحظة يا شيخ، لا تحرقني"] },
+  angry:{ nj:["روّق، ترى لعبة","لا تصول، الحين تتعدل","اشرب موية وارجع","زعلان؟ الجاية نراضيك","هيّن، ما يستاهل تعصّب"],
+          hj:["روّق يا شيخ، دي لعبة","لا تزعل، والله نحبك","إشرب مويه وتعال","زعلان؟ ههههه طيب نخليك تفوز مرة","كدا تعصّب؟ دا لسه أول الجلسة"] },
+  praise:{ nj:["كفو عليك","الله يسلمك","هذا من ذوقك","وأنت الأكفى","تسلم، بس لا تحسب إني بخليك تفوز ههه"],
+           hj:["تسلم يا شيخ","إنت الأحلى","من ذوقك والله","إنت اللي فلة","كلامك حلو، بس ما حيغيّر شي ههههه"] },
+  agree:{ nj:["صادق","إيه والله","كلامك زين","مضبوط","هذا الكلام","صح لسانك"],
+          hj:["صح كلامك","أيوه","مره","بالضبط","هادا الكلام","إيوه كدا"] },
+  disagree:{ nj:["لا ويش لا؟","أقول لا تعاند ههه","لا تكثر، أنت عارف إني صادق","يا رجال اقتنع"],
+             hj:["لا إيش؟","ليش لا يا شيخ؟","خلاص عاد، لا تعاند","مره عنيد إنت ههه"] },
+  ack:{ nj:["زين","أبشر","طيب","تمام","هيّن"], hj:["تمام","ماشي","طيب","أوكي","ماشي يا شيخ"] },
+  laugh:{ nj:["ههههههه","ضحّكتني","ههههه والله إنك رايق","اضحك اضحك، الجاية نشوف","ههههههههه صادق","اضحك قبل ما تخسر ههه"],
+          hj:["ههههههههه","ههههه يا شيخ","ههه والله إنك فاضي","إضحك إضحك، دحين تشوف","يييي ههههههه","خلاص عاد ضحكتني"] },
+  ask:{ nj:["والله ما أدري","يمكن، الله أعلم","وش رايك أنت؟","شوف الورق وأنت تعرف","سؤال صعب ههه","اسأل {b}، يمكن عنده الجواب"],
+        hj:["والله ما أدري","ممكن، ليش لا","إيش رأيك إنت؟","سؤال حلو، ما عندي جواب","اسأل {b} يمكن يعرف","ما أدري يا شيخ، العب بس"] },
+  bot:{ nj:["بوت؟ أنا؟ ههههه عيب عليك","لو أنا بوت كان فزت كل الجولات","بوت وش؟ أنا {{قاعدة|قاعد}} بالاستراحة أشرب قهوة","لا تغيّر السالفة، العب","أذكى من بوت، اسأل رصيدك"],
+        hj:["بوت؟ يا شيخ اتلهّى ههههه","أنا بوت؟ دا أنا في البلكونة أشرب شاهي","لو كنت بوت كان ما خسرت اللي فاتت","لا تغيّر الموضوع، دورك","بوت ولا مو بوت، الفلوس حقيقية"] },
+  misc:{ nj:["صادق","إيه والله","ركّز باللعب ههه","خلنا نلعب","وش قصدك؟ ههه","كلام كبير ههه","طيب وبعدين؟","ما فهمت بس ماشي ههه","عاد هذي سالفة ثانية","أقول ركّز وأنت ساكت ههه"],
+         hj:["صح كلامك","أيوه","مره","طيب يا شيخ","يلا نكمل","إيش قصدك؟ ههه","طيب وبعدين؟","ما فهمت، بس ماشي ههههه","وي، كدا؟","خلاص عاد، العب"] },
+  mic:{ nj:["المايك معي، اصبروا علي","خلوني أقسّم على راحتي","المايك بيدي، اللي يبي حصة يسكت ههه"],
+        hj:["المايك عندي، روّقوا","دحين أقسّم، لحظة","اللي يبغى حصة حلوة يتكلم حلو معايا ههههه"] },
+  folded:{ nj:["أنا {{طالعة|طالع}} هالجولة، أتفرج بس","طلعت، أشوف وش تسوون","أنا برا الجولة، بس عيني عليكم"],
+           hj:["أنا {{طالعة|طالع}} الجولة دي، بتفرّج","انسحبت، بشوف إيش حتسوّوا","طلعت وأنا {{مبسوطة|مبسوط}}"] },
+  uFold:{ nj:["اللي منسحب يسكت ههه","تكلم بعد ما تدخل الجولة","انسحبت وتتكلم؟ ههههه"],
+          hj:["إنت منسحب ولسه تتكلم؟ ههههه","اللي برا الجولة يتفرج وبس","انسحبت يا شيخ؟ خلاص اتفرّج"] },
+  uRich:{ nj:["يا الغني، تكلم وأنت مرتاح","عشان الرصيد عالي صار لك صوت ههه","لا تغتر، الرصيد يطيح بجولة"],
+          hj:["الغني يتكلم ههههه","طبعًا تتكلم، معاك فلوس","لا تتفشخر، الجاية نشوف"] },
+  uPoor:{ nj:["ترى رصيدك يبكي ههه","ركّز، الفلوس قربت تخلص","تبي سلفة؟ ههه"],
+          hj:["رصيدك يبغى له دعاء ههههه","ركّز شوية، الفلوس بتخلص","أسلّفك؟ بفوايد ههههه"] },
+  chime:{ nj:["ههههههه صادق","لا تصدق هالكلام","إيه والله","{b} دايم كذا ههه","ههه يا رجال"],
+          hj:["ههههههه مره","لا تصدق الكلام دا","صح","{b} دايمًا كدا ههههه","يييي ههههه"] },
+};
 function botPost(name,text){
   if(isOnline()){ if(isHost())chatPush(name,text); return; }
   LOCALCHAT.push({name,text,id:LOCALCHAT.length+1});
