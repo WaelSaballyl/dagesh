@@ -1688,6 +1688,8 @@ function finishRound(reveal){
     revealSheet(S.rev.shown,S.rev.winners,over,S.rev.by,S.rev.byI);
   }
   render();
+  { const big=S.players.some(p=>p.bet>=50000);
+    if(reveal||big) setTimeout(()=>botsEvent(reveal?"dagesh":"big"),1400); }
   if(!reveal&&over) return later(()=>endSession(champ),900);
   /* في الغرفة: ننتظر الكل يضغط "الجولة الجاية" — أو ٢٥ ثانية لو أحد نايم */
   if(isOnline()&&isHost()) later(goNext, needReady().length?25000:2500);
@@ -1754,7 +1756,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260922-0654";
+const BUILD="20260922-0713";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -3546,13 +3548,13 @@ function botsHear(text,from){
   if(BOTAI_URL&&AIQ.fails<3) return botsAI(text,from);
   botsHearRules(text,from);
 }
-async function botsAI(text,from){
-  if(AIQ.busy){ AIQ.again=[text,from]; return; }
+async function botsAI(text,from,ev){
+  if(AIQ.busy){ if(!ev)AIQ.again=[text,from]; return; }
   const sess=S, bots=S.players.filter(p=>p.bot&&!p.out); if(!bots.length)return;
   AIQ.busy=true;
   /* وقت الانتظار: بوت "يكتب" عشان ما تحس إن محد سامعك */
-  const t=nrm(text), guess=bots.find(p=>t.includes(nrm(p.name)))||bots[(Math.random()*bots.length)|0], gk="bot"+guess.i;
-  const wait=setTimeout(()=>{ if(S!==sess)return;
+  const t=nrm(text||""), guess=bots.find(p=>t.includes(nrm(p.name)))||bots[(Math.random()*bots.length)|0], gk="bot"+guess.i;
+  const wait=setTimeout(()=>{ if(S!==sess||ev)return;
     TYPERS.set(gk,{name:guess.name,until:Date.now()+20000}); renderTyping();
     if(isOnline()&&isHost())broadcast({t:"typing",cid:gk,name:guess.name}); },600);
   let replies=null;
@@ -3565,7 +3567,9 @@ async function botsAI(text,from){
       bots:bots.map(p=>({name:p.name,dialect:HIJAZI.has(p.name)?"hj":"nj",female:FEMALE.has(p.name),
         team:BOTTEAM[p.name]||"الهلال",chips:p.chips,folded:!!p.folded,
         mic:S.boss===p.i&&(S.phase==="mic"||S.phase==="offer")})),
-      history:chatList().slice(-14).map(m=>({name:m.name,text:m.text}))};
+      history:chatList().slice(-30).map(m=>({name:m.name,text:m.text})),
+      events:(S.log||[]).slice(0,8).reverse().map(x=>x.t),
+      event:ev||undefined};
     const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(),20000);
     const r=await fetch(BOTAI_URL,{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify(body),signal:ctl.signal});
@@ -3577,7 +3581,7 @@ async function botsAI(text,from){
   AIQ.busy=false;
   if(S!==sess)return;
   let at=150;
-  if(replies===null) botsHearRules(text,from);          // الخادم ما رد: الردود الجاهزة
+  if(replies===null){ if(!ev) botsHearRules(text,from); }   // الخادم ما رد: الردود الجاهزة
   else for(const rp of replies){
     const p=bots.find(b=>b.name===rp.bot); if(!p)continue;
     const typeMs=450+rp.text.length*35, start=at, key="bot"+p.i;
@@ -3585,10 +3589,22 @@ async function botsAI(text,from){
       TYPERS.set(key,{name:p.name,until:Date.now()+typeMs+600}); renderTyping();
       if(isOnline()&&isHost())broadcast({t:"typing",cid:key,name:p.name}); },start);
     setTimeout(()=>{ if(S!==sess||p.out)return; TYPERS.delete(key); botPost(p.name,rp.text); },start+typeMs);
-    at=start+typeMs+500+Math.random()*900;
+    at=start+typeMs+(rp.bot===(replies[replies.indexOf(rp)+1]||{}).bot?250:500+Math.random()*900);
   }
   /* لو كتبت شي ثاني وهم يفكرون: نرد عليه بعد ما ينزل ردهم، عشان يشوفونه */
   if(AIQ.again){ const [a,b]=AIQ.again; AIQ.again=null; setTimeout(()=>{ if(S===sess)botsHear(a,b); },at+300); }
+}
+/* بعد داقش (وأحياناً بعد جولة مبلغها كبير) بوت يعلّق من نفسه زي أي لاعب.
+   مرة كل جولتين بالكثير عشان ما يزعج ولا يخلّص حد الرسائل المجاني */
+let LASTEV=-9;
+function botsEvent(kind){
+  if(!BOTAI_URL||AIQ.fails>=3||!S||!S.players)return;
+  if(isOnline()&&!isHost())return;
+  if(S.handNo-LASTEV<2||!S.players.some(p=>p.bot&&!p.out))return;
+  if(Math.random()>(kind==="dagesh"?.6:.3))return;
+  LASTEV=S.handNo;
+  const last=(S.log||[]).slice(0,4).map(x=>x.t).join("، ");
+  botsAI("",null,(kind==="dagesh"?"انكشف الورق بعد داقش. ":"خلصت جولة كبيرة. ")+last);
 }
 function botPost(name,text){
   if(isOnline()){ if(isHost())chatPush(name,text); return; }
