@@ -990,6 +990,7 @@ body{font-size:15px;line-height:1.6}
 .betspot{background:rgba(0,0,0,.55);border-color:rgba(232,180,92,.28);font-size:13px}
 .betspot.boss{background:rgba(232,180,92,.22);border-color:var(--brass);color:#fff}
 .dgtag{background:var(--accent);box-shadow:0 2px 10px rgba(224,97,108,.45)}
+.dgtag.notag{background:#8d5a2b;box-shadow:0 2px 10px rgba(0,0,0,.45)}
 
 /* ---------- شريط الأفعال ----------
    زر واحد أساسي بلون الفلوس، والباقي هادي. */
@@ -1422,7 +1423,7 @@ function newSession(n,mode,diff,names){
      log:[],revealed:new Set(),handNo:0,epoch:0,revisions:0,viewer:0,busy:false,
      players:Array.from({length:n},(_,i)=>({
        i,name:names[i],bot:mode==="bots"&&i!==0,chips:START,hand:[],eval:null,
-       bet:0,folded:false,out:false,acted:false,note:"",resp:null,share:0,askOut:false}))};
+       bet:0,folded:false,out:false,acted:false,note:"",resp:null,share:0,askOut:false,no:false}))};
   startHand();
 }
 /* مؤقّت مربوط بالجولة: لو بدأت جولة جديدة، المهام القديمة تُلغى بدل ما تعبث بالحالة */
@@ -1456,7 +1457,7 @@ function startHand(){
   S.nr=ranks.length;
   const d=deck();
   for(const p of S.players){
-    p.bet=0;p.folded=p.out;p.acted=false;p.note="";p.resp=null;p.share=0;p.askOut=false;p._k=null;p.hand=[];
+    p.bet=0;p.folded=p.out;p.acted=false;p.note="";p.resp=null;p.share=0;p.askOut=false;p.no=false;p._k=null;p.hand=[];
     if(!p.out){p.hand=d.splice(0,4);p.eval=ev(p.hand);}
   }
   do{S.dealer=(S.dealer+1)%S.n;}while(S.players[S.dealer].out);
@@ -1561,7 +1562,7 @@ function botMic(boss){
 }
 function proposeSplit(boss,shares){
   sfx("offer");
-  for(const p of bettors()){p.share=shares[p.i]||0;p.resp=(p.i===boss.i)?"ok":null;}
+  for(const p of bettors()){p.share=shares[p.i]||0;p.resp=(p.i===boss.i)?"ok":null;p.no=false;}
   S.phase="offer";
   say(`${boss.name} عرض تقسيم: ${bettors().map(p=>`${p.name} ${fmt(p.share)}`).join(" · ")}`,"hi");
   runResponses();
@@ -1583,7 +1584,7 @@ function botRespond(p){
     p.resp="dagesh";return;
   }
   if(p.share>=evD*d.acc||S.revisions>=2){p.resp="ok";p.note="وافق";say(`${p.name} وافق على ${fmt(p.share)}`);return;}
-  p.resp="no";p.note="رفض";say(`${p.name} رفض ويبي أكثر`);
+  p.resp="no";p.note="رفض التقسيمة";p.no=true;say(`${p.name} رفض التقسيمة ويبي أكثر`);
 }
 function settleOffer(){
   if(S.phase!=="offer")return;          // حارس: ممنوع تتنفّذ مرتين لنفس العرض
@@ -1605,8 +1606,11 @@ function settleOffer(){
   // فيه رفض: المايك يعيد العرض أو يداقش
   S.revisions++;S.phase="mic";window._sp=null;
   const boss=S.players[S.boss];
-  say(`فيه من رفض — المايك يعيد العرض أو يداقش`);
-  for(const p of others())p.resp=null;
+  const nos=others().filter(p=>p.resp==="no");
+  const whoNo=nos.map(p=>p.name).join(" و");
+  say(nos.length?`${whoNo} ${nos.length>1?"رفضوا":"رفض"} التقسيمة — ${boss.name} يعيد العرض أو يداقش`
+               :`فيه من رفض — المايك يعيد العرض أو يداقش`,"hi");
+  for(const p of others()){p.note=p.resp==="no"?"رفض التقسيمة":(p.resp==="ok"?"وافق":"");p.resp=null;}
   render();
   if(boss.bot)later(()=>{
     if(S.revisions>2)return dagesh(boss.i);
@@ -1756,7 +1760,7 @@ function endScreen(win,standings,why,party){
    GitHub Pages يخلي المتصفح يمسك الصفحة عشر دقايق على الأقل، فيصير
    اللاعب يفتح الرابط ويشوف نسخة قديمة ويظن إن التعديل ما نزل.
    نقارن رقم النسخة مع اللي على السيرفر، ونحدّث لحاله لو ما فيه لعب. */
-const BUILD="20260922-1124";
+const BUILD="20260925-1423";
 function bust(v){ try{ const u=new URL(location.href); u.searchParams.set("v",v);
   location.replace(u.toString()); }catch(e){ location.reload(); } }
 function updBar(v){
@@ -2402,7 +2406,7 @@ function render(){
     const backs=live4&&!me&&!show&&!p.out&&!p.folded;
     html.push(`<div class="seat ${turn?"turn":""} ${p.out||p.folded?"dim":""} ${me?"mine":""} ${lead?"lead":""}"
       data-i="${p.i}" style="left:${x}%;top:${y}%">
-      ${dgd?'<span class="dgtag">داقش</span>':""}
+      ${dgd?'<span class="dgtag">داقش</span>':p.no&&(S.phase==="mic"||S.phase==="offer")?'<span class="dgtag notag">رفض التقسيمة</span>':""}
       ${backs?'<div class="backs"><i></i><i></i><i></i><i></i></div>':""}
       <i class="ava" style="--h:${(p.i*67)%360}">${lead?'<b class="crown-i" title="الأعلى رصيد"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18h18l1.2-10-5.2 3.6L12 4 7 11.6 1.8 8z" fill="currentColor"/></svg></b>':""}${(p.name||"?").trim().charAt(0)}${isDealer?'<b class="dlr" title="الموزّع">D</b>':""}</i>
       <span class="nm">${esc(p.name)}</span>
@@ -2469,8 +2473,9 @@ function render(){
   }else if(t>=0){
     const p=S.players[t], mine=t===S.viewer;
     tb.className="turn"+(mine?" mine":"");
+    const nos2=S.phase==="mic"?bettors().filter(x=>x.no).map(x=>x.name):[];
     const what = S.phase==="betting" ? "يراهن أو ينسحب"
-               : S.phase==="mic"     ? "يعرض التقسيم أو يداقش"
+               : S.phase==="mic"     ? (nos2.length?`${nos2.join(" و")} ${nos2.length>1?"رفضوا":"رفض"} — يعيد العرض أو يداقش`:"يعرض التقسيم أو يداقش")
                : bettors().some(x=>x.askOut) ? "يرد على طلب الانسحاب"
                : "يرد على العرض";
     tb.innerHTML=`<b>${mine?"دورك":"دور "+p.name}</b><span>${what}</span>`;
@@ -3166,7 +3171,7 @@ function stateFor(seat){
     dealer:S.dealer,handNo:S.handNo,log:S.log,revisions:S.revisions,
     revealed:[...S.revealed],yourSeat:spec?-1:seat,spectator:spec,
     players:S.players.map(p=>({i:p.i,name:p.name,chips:p.chips,bet:p.bet,folded:p.folded,
-      out:p.out,bot:!!p.bot,note:p.note,resp:p.resp,share:p.share,askOut:p.askOut,
+      out:p.out,bot:!!p.bot,note:p.note,resp:p.resp,share:p.share,askOut:p.askOut,no:!!p.no,
       hand:(!spec&&p.i===seat)||S.revealed.has(p.i)?p.hand:[],
       eval:(!spec&&p.i===seat)||S.revealed.has(p.i)?p.eval:null}))};
 }
@@ -3225,7 +3230,7 @@ function applyAct(seat,type,pl){
                  p.resp=pl.r;
                  if(pl.r==="dagesh"){}
                  else if(pl.r==="ok"){p.note="وافق";say(`${p.name} وافق على ${fmt(p.share)}`);}
-                 else{p.note="رفض";say(`${p.name} رفض ويبي أكثر`);}
+                 else{p.note="رفض التقسيمة";p.no=true;say(`${p.name} رفض التقسيمة ويبي أكثر`);}
                  runResponses();break;
     case "askout":   if(S.phase!=="offer"&&S.phase!=="mic")return;requestOut(p);break;
     case "dagesh-any":
